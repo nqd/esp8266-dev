@@ -95,7 +95,9 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
     start_session(firmware_espconn, upDate_connect_cb, upDate_discon_cb);
   }
   else {
-    INFO("We have lastest firmware (current %x vs online %x)\n", version_fwr, version);
+    INFO("We have lastest firmware (current %u.%u.%u vs online %u.%u.%u)\n", 
+      (version_fwr/256/256)%256, (version_fwr/256)%256, version_fwr%256
+      (version/256/256)%256, (version/256)%256, version%256);
   }
 }
 
@@ -163,7 +165,7 @@ get_version_connect_cb(void *arg)
     IP2STR(pespconn->proto.tcp->remote_ip),
     fota_info.uuid,
     fota_info.token,
-    fota_info.host,
+    fota_info.client,
     fota_info.version
     );
 
@@ -288,13 +290,13 @@ start_fota(fota_info_t *info)
   fota_info.port = info->port;
   os_memcpy(&fota_info.uuid, &info->uuid, os_strlen(info->uuid));
   os_memcpy(&fota_info.token, &info->token, os_strlen(info->token));
-  os_memcpy(&fota_info.host, &info->host, os_strlen(info->host));
+  os_memcpy(&fota_info.client, &info->client, os_strlen(info->client));
   os_memcpy(&fota_info.version, &info->version, os_strlen(info->version));
 
   // get current firmware version
   version_fwr = convert_version(fota_info.version, os_strlen(fota_info.version));
   if (version_fwr < 0) {
-    REPORT("Version configuration is wrong\n");
+    REPORT("Version configuration [%s] is wrong\n", fota_info.version);
     return;
   }
 

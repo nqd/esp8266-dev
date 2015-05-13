@@ -10,12 +10,12 @@ Accept: */*\r\n"
 
 #define pHeadAuthen "UUID: %s\r\n\
 Token: %s\r\n\
-Host: %s\r\n\
+Client: %s\r\n\
 Version: %s\r\n"
 
 #define UUID_LEN    15
 #define TOKEN_LEN   161
-#define HOST_LEN    4
+#define CLIENT_LEN    4
 #define VERSION_LEN VERSION_BYTE_STR
 
 typedef struct {
@@ -23,7 +23,7 @@ typedef struct {
   uint16_t port;
   char uuid[UUID_LEN];
   char token[TOKEN_LEN];
-  char host[HOST_LEN];
+  char client[CLIENT_LEN];
   char version[VERSION_LEN];
 } fota_info_t;
 

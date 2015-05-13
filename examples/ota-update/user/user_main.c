@@ -33,12 +33,12 @@ connect_status_check(void *arg)
 
     os_memset(info.uuid, '\0', sizeof(info.uuid));
     os_memset(info.token, '\0', sizeof(info.token));
-    os_memset(info.host, '\0', sizeof(info.host));
+    os_memset(info.client, '\0', sizeof(info.client));
     os_memset(info.version, '\0', sizeof(info.version));
 
     os_memcpy(info.uuid, OTA_UUID, MIN(sizeof(info.uuid), strlen(OTA_UUID)));
     os_memcpy(info.token, OTA_TOKEN, MIN(sizeof(info.token), strlen(OTA_TOKEN)));
-    os_memcpy(info.host, OTA_HOST, MIN(sizeof(info.host), strlen(OTA_HOST)));
+    os_memcpy(info.client, OTA_CLIENT, MIN(sizeof(info.client), strlen(OTA_CLIENT)));
     os_memcpy(info.version, OTA_VERSION, MIN(sizeof(info.version), strlen(OTA_VERSION)));
 
     start_fota(&info);

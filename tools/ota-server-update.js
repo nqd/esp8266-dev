@@ -4,8 +4,8 @@ var http = require("http"),
     fs = require("fs")
     port = process.argv[2] || 8888;
 
-var fileUser1 = "/home/nqd/esp-fw-ota/user1.bin";
-var fileUser2 = "/home/nqd/esp-fw-ota/user2.bin";
+var fileUser1 = "/home/nqdinh/esp-fw-ota/user1.bin";
+var fileUser2 = "/home/nqdinh/esp-fw-ota/user2.bin";
 
 http.createServer(function(request, response) {
 
@@ -19,9 +19,9 @@ http.createServer(function(request, response) {
       application: "otaupdate",
       last:
         {
-          version: "0.1.100",
+          version: "1.0.2",
           updated: 1430135590467,
-          url: "/firmware/otaupdate/versions/0.1.100"
+          url: "/firmware/otaupdate/versions/1.0.2"
         }
     }
     response.write(JSON.stringify(res));
@@ -38,8 +38,8 @@ http.createServer(function(request, response) {
     }
 
     // testing
-    response.writeHead(404)
-    return response.end();
+    // response.writeHead(404)
+    // return response.end();
     // end testing
 
     console.log(filename)
