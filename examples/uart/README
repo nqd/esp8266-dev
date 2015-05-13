@@ -1,0 +1,2 @@
+- setup uart at 115200 baud rate
+- received uart, trigger thread call
