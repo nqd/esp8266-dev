@@ -1,9 +1,9 @@
 ## Why this?
 Short: I do not like the developing environment provided by Espressif. Then I rewrite Makefile to:
 - reuse common code, e.g. MQTT, flash file system, and driver for SoC peripherals.
-- json parsing of SDK is not good enough, I have no way to check if this/that string is a valid JSON.
+- have other json parsing. Current json parsing of SDK (take from Contiki OS) is not good enough, I have no way to check if this/that string is a valid JSON.
 - quick setup, e.g. make, make flash, make login, make OTA=1 fash.
-- firmware over-the-air update easy, e.g. make RELEASE=MINOR/MINOR/PATCH. This is the on going process.
+- make firmware over-the-air update easy, e.g. make RELEASE=MINOR/MINOR/PATCH. This is the on going process.
 
 All examples have been testing with 512KB module, SDK 1.0.0.
 
@@ -30,10 +30,11 @@ I update tools/gen_appbin.py to avoid compiling error. Off-course I can change $
 
 ## To use
 
+```
 make OTA=1/0                #default OTA=1
 make OTA=1 IMAGE=1/2        #generate image user1/user2
 make OTA=1 IMAGE=1/2 flash // program with OTA enable
-
+```
 
 ## How to write makefile for program:
 
@@ -54,5 +55,5 @@ Please (me), check for frequence update
 + flash file system https://github.com/pellepl/spiffs.git
 
 ## Todo
-+ more complete ota update program, api of ota-update is at docs/ota-update.md
++ more complete ota update program, API of ota-update is at docs/ota-update.md
 + flash file system testing
