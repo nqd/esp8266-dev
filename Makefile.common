@@ -46,7 +46,7 @@ LDFLAGS   = -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
 
 # linker script used for the above linkier step
 IMAGE ?= 1
-OTA 	?= 0
+OTA 	?= 1
 
 # files for flashing, w/o OTA
 BIN_NAME_1   = 0x00000
