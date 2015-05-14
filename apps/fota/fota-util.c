@@ -84,7 +84,7 @@ convert_version(const char *version_str, uint32_t len)
 
   uint32_t i;
 
-  for (i=0; i<= len; i++) {
+  for (i=0; i<= len; i++) {             // yes, I want to see /0 character
     c = version_str[i];
     if('0' <= c && c <= '9') {
       digit = c - '0';

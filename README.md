@@ -31,9 +31,9 @@ I update tools/gen_appbin.py to avoid compiling error. Off-course I can change $
 ## To use
 
 ```
-make OTA=1/0                #default OTA=1
-make OTA=1 IMAGE=1/2        #generate image user1/user2
-make OTA=1 IMAGE=1/2 flash // program with OTA enable
+make OTA=1/0                # default OTA=1
+make OTA=1 IMAGE=1/2        # generate image user1/user2
+make OTA=1 IMAGE=1/2 flash  # program with OTA enable
 ```
 
 ## How to write makefile for program:
@@ -51,8 +51,8 @@ include ${ROOT}/Makefile.common
 Please (me), check for frequence update
 
 + mqtt https://github.com/tuanpmt/esp_mqtt
-+ json parsing https://bitbucket.org/zserge/jsmn/
-+ flash file system https://github.com/pellepl/spiffs.git
++ json parsing https://bitbucket.org/zserge/jsmn
++ flash file system https://github.com/pellepl/spiffs
 
 ## Todo
 + more complete ota update program, API of ota-update is at docs/ota-update.md
