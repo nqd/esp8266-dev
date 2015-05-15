@@ -1,6 +1,7 @@
 #ifndef _FOTA_VERSION_H_
 #define _FOTA_VERSION_H_
 
+#include "osapi.h"
 #include "fota-util.h"
 
 #define pHeadStatic "Connection: keep-alive\r\n\
@@ -27,6 +28,7 @@ typedef struct {
   char *host;
   uint16_t interval;
   struct espconn *conn;
+  os_timer_t periodic;
 } fota_client_t;
 
 typedef struct {
