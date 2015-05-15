@@ -6,6 +6,7 @@
 // json parsing
 #include "jsmn.h"
 
+#include "fota.h"
 #include "fota-util.h"
 
 #define FAILED    -1
@@ -52,25 +53,25 @@ parse_fota(const char *json, uint32_t len, char *version, char *host, char *url,
       for (j = 1; j < tok[i+1].size; j++) {
         if (jsoneq(json, &tok[i+j+1], "version") == 0) {
           uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
-          version = (char*) os_zalloc(len+1)
+          version = (char*) os_zalloc(len+1);
           os_strncpy(version, (char*)(json+ tok[i+j+2].start), len);
           count += 1;
         }
         if (jsoneq(json, &tok[i+j+1], "host") == 0) {
           uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
-          host = (char*) os_zalloc(len+1)
+          host = (char*) os_zalloc(len+1);
           os_strncpy(host, (char*)(json+ tok[i+j+2].start), len);          
           count += 1;
         }
         if (jsoneq(json, &tok[i+j+1], "url") == 0) {
           uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
-          url = (char*) os_zalloc(len+1)
+          url = (char*) os_zalloc(len+1);
           os_strncpy(url, (char*)(json+ tok[i+j+2].start), len);          
           count += 1;
         }
         if (jsoneq(json, &tok[i+j+1], "protocol") == 0) {
           uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
-          protocol = (char*) os_zalloc(len+1)
+          protocol = (char*) os_zalloc(len+1);
           os_strncpy(protocol, (char*)(json+ tok[i+j+2].start), len);          
           count += 1;
         }

@@ -21,7 +21,7 @@ PROJECT   ?= ESPPROJECT
 # which modules (subdirectories) of the project to include in compiling
 MODULES   += user
 # include dev 
-DEVS      := ${ROOT}/dev ${ROOT}/dev/driver
+DEVS      := ${ROOT}/dev ${ROOT}/dev/driver ${ROOT}/dev/utils
 
 ####
 #### create .version file when it's not existed yet

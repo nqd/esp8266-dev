@@ -18,7 +18,7 @@ static is_running = 0;
 static struct espconn *firmware_espconn = NULL;
 static struct upgrade_server_info *upServer = NULL;
 
-LOCAL void start_session(struct espconn *pespconn, void *connect_cb, void *disconnect_cb);
+LOCAL void start_session(fota_client_t *fota_client, void *connect_cb, void *disconnect_cb);
 LOCAL void upDate_discon_cb(void *arg);
 LOCAL void upDate_connect_cb(void *arg);
 
@@ -66,7 +66,7 @@ LOCAL void ICACHE_FLASH_ATTR
 get_version_recv(void *arg, char *pusrdata, unsigned short len)
 {
   struct espconn *pespconn = arg;
-  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
+  fota_client_t *fota_client = (fota_client_t *)pespconn->reverse;
 
   /* get body */
   char *body = (char*)os_strstr(pusrdata, "\r\n\r\n");
@@ -91,7 +91,7 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   /* then, we have valide JSON response */  
   // disable data receiving timeout handing
   // and close connection 
-  os_timer_disarm(&fota_client->request_timeout);
+  os_timer_disarm(&(fota_client->request_timeout));
   clear_tcp_of_espconn(fota_client->conn);
 
   uint32_t version;
@@ -103,12 +103,12 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   /* if we still have lastest version */
   if (version <= version_fwr) {
     INFO("We have lastest firmware (current %u.%u.%u vs online %u.%u.%u)\n", 
-      (version_fwr/256/256)%256, (version_fwr/256)%256, version_fwr%256
+      (version_fwr/256/256)%256, (version_fwr/256)%256, version_fwr%256,
       (version/256/256)%256, (version/256)%256, version%256);
     goto CLEAN_MEM;
   }
 
-  if (os_strncmp(n_protocol, "https", os_strlen("https"))
+  if (os_strncmp(n_protocol, "https", os_strlen("https")))
     fota_client->fw_server.secure = 1;
   else
     fota_client->fw_server.secure = 0;
@@ -134,7 +134,7 @@ LOCAL void ICACHE_FLASH_ATTR
 get_version_timeout(void *arg)
 {
   struct espconn *pespconn = arg;
-  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
+  fota_client_t *fota_client = (fota_client_t *)pespconn->reverse;
   os_timer_disarm(&fota_client->request_timeout);
 
   INFO("get version timeout, close connection\n");
@@ -151,7 +151,7 @@ LOCAL void ICACHE_FLASH_ATTR
 get_version_sent_cb(void *arg)
 {
   struct espconn *pespconn = arg;
-  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
+  fota_client_t *fota_client = (fota_client_t *)pespconn->reverse;
 
   os_timer_disarm(&fota_client->request_timeout);
   os_timer_setfn(&fota_client->request_timeout, (os_timer_func_t *)get_version_timeout, pespconn);
@@ -180,7 +180,7 @@ LOCAL void ICACHE_FLASH_ATTR
 get_version_connect_cb(void *arg)
 {
   struct espconn *pespconn = (struct espconn *)arg;
-  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
+  fota_client_t *fota_client = (fota_client_t *)pespconn->reverse;
 
   espconn_regist_recvcb(pespconn, get_version_recv);
   espconn_regist_sentcb(pespconn, get_version_sent_cb);
@@ -198,18 +198,18 @@ get_version_connect_cb(void *arg)
 
   os_sprintf(temp, "GET /firmware/%s/versions HTTP/1.0\r\nHost: %s\r\n"pHeadStatic""pHeadAuthen"\r\n",
     PROJECT,
-    fota_client->host
+    fota_client->host,
     fota_client->uuid,   //pHeaderAuthen
     fota_client->token,
     FOTA_CLIENT,
     user_bin,
-    fota_client->version
+    VERSION
     );
 
 #if (FOTA_SECURE)
   espconn_sent(pespconn, temp, os_strlen(temp));
 #else
-  espconn_secure_sent(pespconn, temp, os_strlen(temp))
+  espconn_secure_sent(pespconn, temp, os_strlen(temp));
 #endif
   os_free(temp);
 }
@@ -307,7 +307,7 @@ upDate_connect_cb(void *arg)
 LOCAL void ICACHE_FLASH_ATTR
 start_session(fota_client_t *fota_client, void *connect_cb, void *disconnect_cb)
 {
-  os_memcpy(fota_client->conn->proto.tcp->remote_ip, &fota_client.ip, 4);
+  os_memcpy(fota_client->conn->proto.tcp->remote_ip, &fota_client->ip, 4);
 
   espconn_regist_connectcb(fota_client->conn, connect_cb);
   espconn_regist_reconcb(fota_client->conn, disconnect_cb);
@@ -334,7 +334,7 @@ fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
       *((uint8 *) &ipaddr->addr + 3));
 
   struct espconn *pespconn = (struct espconn *)arg;
-  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
+  fota_client_t *fota_client = (fota_client_t *)pespconn->reverse;
   // check for new version
   start_session(fota_client, get_version_connect_cb, get_version_disconnect_cb);
 }
@@ -347,10 +347,10 @@ fota_ticktock(fota_client_t *fota_client)
   // remember to clean tcp connection after each using
   fota_client->conn->proto.tcp = (esp_tcp *)os_zalloc(sizeof(esp_tcp));
   fota_client->conn->proto.tcp->local_port = espconn_port();
-  fota_client->conn->proto.tcp->remote_port = fota_client.port;
+  fota_client->conn->proto.tcp->remote_port = fota_client->port;
 
   // if ip address is provided, go ahead
-  if (UTILS_StrToIP(fota_client->host, &fota_client.ip)) {
+  if (UTILS_StrToIP(fota_client->host, &fota_client->ip)) {
     INFO("FOTA client: Connect to ip  %s:%d\r\n", fota_client->host, fota_client->port);
     // check for new version
     start_session(fota_client, get_version_connect_cb, get_version_disconnect_cb);
@@ -363,7 +363,7 @@ fota_ticktock(fota_client_t *fota_client)
 }
 
 void ICACHE_FLASH_ATTR
-start_fota(fota_client_t *fota_client, uint16_t interval, char *host, uint16_t port, char *id, char* token);
+start_fota(fota_client_t *fota_client, uint16_t interval, char *host, uint16_t port, char *id, char* token)
 {
   if (is_running) {
     REPORT("FOTA is called only one time, exit\n");
@@ -381,15 +381,15 @@ start_fota(fota_client_t *fota_client, uint16_t interval, char *host, uint16_t p
   // setup fota_client
   os_memset(fota_client, '\0', sizeof(fota_client_t));
   fota_client->interval = interval;
-  fota_client->host = os_zalloc(os_strlen(host)+1);
+  fota_client->host = (char*)os_zalloc(os_strlen(host)+1);
   os_memcpy(fota_client->host, host, os_strlen(host));
   // port
   fota_client->port = port;
   // uuid
-  fota_client->uuid = os_zalloc(os_strlen(id)+1);
+  fota_client->uuid = (char*)os_zalloc(os_strlen(id)+1);
   os_memcpy(fota_client->uuid, id, os_strlen(id));
   // token
-  fota_client->token = os_zalloc(os_strlen(token)+1);
+  fota_client->token = (char*)os_zalloc(os_strlen(token)+1);
   os_memcpy(fota_client->token, token, os_strlen(token));
 
   // connection
