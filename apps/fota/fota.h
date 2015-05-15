@@ -36,10 +36,10 @@ typedef struct {
 } fota_client_t;
 
 typedef struct {
+  char *host;
+  char *url;
   ip_addr_t server;
   uint16_t port;
-  char host[HOST_LEN];
-  char url[URL_LEN];
 } fota_cdn_t
 
 void start_fota(fota_client_t *client, uint16_t interval, char *host, uint16_t port, char *id, char* token);

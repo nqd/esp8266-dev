@@ -23,6 +23,7 @@ OTA server should return information of last version, which contain metadata of 
             {
                 version: 0.1.100,
                 created: timestamp,
+                protocol: http/https,
                 host: cdn-host,
                 url: /firmware/:application/versions/0.1.100
             }

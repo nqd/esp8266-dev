@@ -15,10 +15,7 @@
 
 static is_running = 0;
 
-static struct espconn *version_espconn = NULL;
 static struct espconn *firmware_espconn = NULL;
-
-static os_timer_t fota_delay_check;
 static struct upgrade_server_info *upServer = NULL;
 
 LOCAL void start_session(struct espconn *pespconn, void *connect_cb, void *disconnect_cb);
@@ -82,7 +79,8 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
 
   /* parse json, get version */  
   int32_t version;
-  if ((version = parse_version(body, bodylen)) < 0) {
+  char *fw_host, *fw_url;
+  if (parse_fota(body, bodylen, &version, fw_host, fw_url) < 0)
     INFO("Invalid response\n");
     return;
   }
@@ -90,13 +88,12 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   // disable data receiving timeout handing
   // and close connection 
   os_timer_disarm(&fota_client->request_timeout);
-  
   clear_tcp_of_espconn(fota_client->conn);
 
   /* if we have newer version, disable timeout, and call get firmware session */
   if (version > version_fwr) {
     INFO("Starting update new firmware\n");
-    start_session(firmware_espconn, upDate_connect_cb, upDate_discon_cb);
+    // start_session(firmware_espconn, upDate_connect_cb, upDate_discon_cb);
   }
   else {
     INFO("We have lastest firmware (current %u.%u.%u vs online %u.%u.%u)\n", 
@@ -354,8 +351,7 @@ start_fota(fota_client_t *fota_client, uint16_t interval, char *host, uint16_t p
     is_running = 1;
 
   // get current firmware version
-  version_fwr = convert_version(VERSION, os_strlen(VERSION));
-  if (version_fwr < 0) {
+  if (convert_version(VERSION, os_strlen(VERSION), &version_fwr) < 0) {
     REPORT("Version configuration [%s] is wrong\n", VERSION);
     return;
   }

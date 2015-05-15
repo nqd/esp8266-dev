@@ -21,8 +21,8 @@ jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   return -1;
 }
 
-int32_t ICACHE_FLASH_ATTR
-parse_version(const char *json, uint32_t len)
+int8_t  ICACHE_FLASH_ATTR
+parse_fota(const char *json, uint32_t len, uint32_t *version, char *host, char *url)
 {
   int i;
   int r;
@@ -73,14 +73,14 @@ parse_version(const char *json, uint32_t len)
   return FAILED;
 }
 
-int32_t ICACHE_FLASH_ATTR
-convert_version(const char *version_str, uint32_t len)
+int8_t ICACHE_FLASH_ATTR
+convert_version(const char *version_str, uint32_t len, uint32_t *version_bin)
 {
   uint32_t value = 0, digit;
   int8_t c;
   int8_t byte = 0;
 
-  int32_t version_bin = 0;
+  *version_bin = 0;
 
   uint32_t i;
 
@@ -93,11 +93,11 @@ convert_version(const char *version_str, uint32_t len)
         return FAILED;
     }
     else if(c == '.' || c == 0) {
-      version_bin = version_bin*256 + value;
+      *version_bin = *version_bin*256 + value;
       byte++;
 
       if (byte >= VERSION_BYTE)
-        return version_bin;
+        return *version_bin;
       else if (c == '\0')
         return FAILED;
 
@@ -107,5 +107,5 @@ convert_version(const char *version_str, uint32_t len)
       return FAILED;
     }
   }
-  return version_bin;
+  return SUCCESS;
 }

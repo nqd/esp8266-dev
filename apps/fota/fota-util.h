@@ -14,7 +14,7 @@
 #define VERSION_BYTE_STR    (VERSION_BYTE*3+(VERSION_BYTE-1)+1)       // xxx.xxx.xxx\0
 
 
-int32_t convert_version(const char *version_str, uint32_t len);
-int32_t parse_version(const char *json, uint32_t len);
+int8_t convert_version(const char *version_str, uint32_t len, uint32_t *version_bin);
+int8_t parse_fota(const char *json, uint32_t len, uint32_t *version, char *host, char *url);
 
 #endif
