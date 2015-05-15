@@ -29,14 +29,14 @@ static fota_client_t fota_client;
 static int32_t version_fwr;
 
 LOCAL void ICACHE_FLASH_ATTR
-clear_espconn(struct espconn *conn) {
+clear_tcp_of_espconn(struct espconn *conn) {
   if (conn != NULL) {
     if (conn->proto.tcp != NULL) {
       os_free(conn->proto.tcp);
       conn->proto.tcp = NULL;
     }
-    os_free(conn);
-    conn = NULL;
+    // os_free(conn);
+    // conn = NULL;
   }
 }
 
@@ -68,7 +68,9 @@ clear_upgradeconn(struct upgrade_server_info *server)
 LOCAL void ICACHE_FLASH_ATTR
 get_version_recv(void *arg, char *pusrdata, unsigned short len)
 {
-  // INFO("Get version receive %s\n", pusrdata);
+  struct espconn *pespconn = arg;
+  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
+
   /* get body */
   char *body = (char*)os_strstr(pusrdata, "\r\n\r\n");
   if (body == NULL) {
@@ -86,10 +88,10 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   }
   /* then, we have version response */  
   // disable data receiving timeout handing
-  // and close connection (server may close connection now, but just to make sure) 
-  os_timer_disarm(&fota_delay_check);
-
-  clear_espconn(version_espconn);
+  // and close connection 
+  os_timer_disarm(&fota_client->request_timeout);
+  
+  clear_tcp_of_espconn(fota_client->conn);
 
   /* if we have newer version, disable timeout, and call get firmware session */
   if (version > version_fwr) {
@@ -110,12 +112,14 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   * @retval None
   */
 LOCAL void ICACHE_FLASH_ATTR
-get_version_wait(void *arg)
+get_version_timeout(void *arg)
 {
-  os_timer_disarm(&fota_delay_check);
+  struct espconn *pespconn = arg;
+  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
+  os_timer_disarm(&fota_client->request_timeout);
 
   INFO("get version timeout, close connection\n");
-  clear_espconn(version_espconn);
+  clear_tcp_of_espconn(pespconn);
 }
 
 /**
@@ -128,9 +132,11 @@ LOCAL void ICACHE_FLASH_ATTR
 get_version_sent_cb(void *arg)
 {
   struct espconn *pespconn = arg;
-  os_timer_disarm(&fota_delay_check);
-  os_timer_setfn(&fota_delay_check, (os_timer_func_t *)get_version_wait, pespconn);
-  os_timer_arm(&fota_delay_check, 5000, 0);
+  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
+
+  os_timer_disarm(&fota_client->request_timeout);
+  os_timer_setfn(&fota_client->request_timeout, (os_timer_func_t *)get_version_timeout, pespconn);
+  os_timer_arm(&fota_client->request_timeout, 5000, 0);
   INFO("get version sent cb\n");
 }
 
@@ -143,7 +149,7 @@ LOCAL void ICACHE_FLASH_ATTR
 get_version_disconnect_cb(void *arg)
 {
   INFO("get version disconnect tcp\n");
-  clear_espconn(version_espconn);
+  clear_tcp_of_espconn((struct espconn *)arg);
 }
 
 /**
@@ -155,23 +161,37 @@ LOCAL void ICACHE_FLASH_ATTR
 get_version_connect_cb(void *arg)
 {
   struct espconn *pespconn = (struct espconn *)arg;
+  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
 
   espconn_regist_recvcb(pespconn, get_version_recv);
   espconn_regist_sentcb(pespconn, get_version_sent_cb);
 
+  uint8_t user_bin[12] = {0};
+  if(system_upgrade_userbin_check() == UPGRADE_FW_BIN1) {
+    os_memcpy(user_bin, "user2.bin", 10);
+  }
+  else if(system_upgrade_userbin_check() == UPGRADE_FW_BIN2) {
+    os_memcpy(user_bin, "user1.bin", 10);
+  }
+
   char *temp = NULL;
   temp = (uint8 *) os_zalloc(512);
 
-  os_sprintf(temp, "GET /firmware/%s/versions HTTP/1.0\r\nHost: "IPSTR"\r\n"pHeadStatic""pHeadAuthen"\r\n",
+  os_sprintf(temp, "GET /firmware/%s/versions HTTP/1.0\r\nHost: %s\r\n"pHeadStatic""pHeadAuthen"\r\n",
     PROJECT,
-    IP2STR(pespconn->proto.tcp->remote_ip),
-    fota_client.uuid,
-    fota_client.token,
-    fota_client.client,
-    fota_client.version
+    fota_client->host
+    fota_client->uuid,   //pHeaderAuthen
+    fota_client->token,
+    FOTA_CLIENT,
+    user_bin,
+    fota_client->version
     );
 
+#if (FOTA_SECURE)
   espconn_sent(pespconn, temp, os_strlen(temp));
+#else
+  espconn_secure_sent(pespconn, temp, os_strlen(temp))
+#endif
   os_free(temp);
 }
 
@@ -195,7 +215,7 @@ upDate_rsp(void *arg)
   // clear upgrade connection
   clear_upgradeconn(server);
   // we can close it now, start from client
-  clear_espconn(firmware_espconn);
+  clear_tcp_of_espconn(firmware_espconn);
 }
 
 /**
@@ -209,7 +229,7 @@ upDate_discon_cb(void *arg)
   // clear upgrade connection
   clear_upgradeconn(upServer);
   // we can close it now, start from client
-  clear_espconn(firmware_espconn);
+  clear_tcp_of_espconn(firmware_espconn);
   INFO("update disconnect\n");
 }
 
@@ -223,7 +243,6 @@ upDate_connect_cb(void *arg)
 {
   struct espconn *pespconn = (struct espconn *)arg;
   char temp[32] = {0};
-  uint8_t user_bin[12] = {0};
   uint8_t i = 0;
 
   system_upgrade_init();
@@ -244,6 +263,7 @@ upDate_connect_cb(void *arg)
     upServer->url = (uint8 *) os_zalloc(1024);
   }
 
+  uint8_t user_bin[12] = {0};
   if(system_upgrade_userbin_check() == UPGRADE_FW_BIN1) {
     os_memcpy(user_bin, "user2.bin", 10);
   }
@@ -273,7 +293,7 @@ start_session(fota_client_t *fota_client, void *connect_cb, void *disconnect_cb)
   espconn_regist_connectcb(fota_client->conn, connect_cb);
   espconn_regist_reconcb(fota_client->conn, disconnect_cb);
   espconn_regist_disconcb(fota_client->conn, disconnect_cb);
-#if (FOTA_SECURE)  
+#if (FOTA_SECURE)
   espconn_secure_connect(fota_client->conn);
 #else
   espconn_connect(fota_client->conn);
@@ -294,21 +314,29 @@ fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
       *((uint8 *) &ipaddr->addr + 2),
       *((uint8 *) &ipaddr->addr + 3));
 
-  struct espconn *pConn = (struct espconn *)arg;
-  struct fota_client_t *client = (struct fota_client_t *)pConn->reverse;
+  struct espconn *pespconn = (struct espconn *)arg;
+  struct fota_client_t *fota_client = (struct fota_client_t *)pespconn->reverse;
   // check for new version
-  start_session(client, get_version_connect_cb, get_version_disconnect_cb);
+  start_session(fota_client, get_version_connect_cb, get_version_disconnect_cb);
 }
 
 // is called periodically to check for next version
 LOCAL void ICACHE_FLASH_ATTR
 fota_ticktock(fota_client_t *fota_client)
 {
+  // new tcp connection
+  // remember to clean tcp connection after each using
+  fota_client->conn->proto.tcp = (esp_tcp *)os_zalloc(sizeof(esp_tcp));
+  fota_client->conn->proto.tcp->local_port = espconn_port();
+  fota_client->conn->proto.tcp->remote_port = fota_client.port;
+
+  // if ip address is provided, go ahead
   if (UTILS_StrToIP(fota_client->host, &fota_client.ip)) {
     INFO("FOTA client: Connect to ip  %s:%d\r\n", fota_client->host, fota_client->port);
     // check for new version
     start_session(fota_client, get_version_connect_cb, get_version_disconnect_cb);
   }
+  // else, use dns query to get ip address
   else {
     INFO("FOTA client: Connect to domain %s:%d\r\n", fota_client->host, fota_client->port);
     espconn_gethostbyname(fota_client->conn, fota_client->host, &fota_client->ip, fota_dns_found);
@@ -351,9 +379,6 @@ start_fota(fota_client_t *fota_client, uint16_t interval, char *host, uint16_t p
   fota_client->conn->reverse = fota_client;
   fota_client->conn->type = ESPCONN_TCP;
   fota_client->conn->state = ESPCONN_NONE;
-  fota_client->conn->proto.tcp = (esp_tcp *)os_zalloc(sizeof(esp_tcp));
-  fota_client->conn->proto.tcp->local_port = espconn_port();
-  fota_client->conn->proto.tcp->remote_port = fota_client.port;
 
   os_timer_disarm(&fota_client->periodic);
   os_timer_setfn(&fota_client->periodic, (os_timer_func_t *)fota_ticktock, fota_client);
