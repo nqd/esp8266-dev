@@ -17,6 +17,7 @@
 #include "fota.h"
 
 static os_timer_t connect_check_timer;
+static fota_client_t fota_client;
 
 #define MIN(a,b) ((a)>(b)?(b):(a))
 
@@ -27,21 +28,7 @@ connect_status_check(void *arg)
   if (wifi_station_get_connect_status() == STATION_GOT_IP) {
     os_printf("Got IP, start update\n");
     // start fota session
-    fota_info_t info;
-    info.server.addr = ipaddr_addr(UPDATE_SERVER_IP);
-    info.port = UPDATE_SERVER_PORT;
-
-    os_memset(info.uuid, '\0', sizeof(info.uuid));
-    os_memset(info.token, '\0', sizeof(info.token));
-    os_memset(info.client, '\0', sizeof(info.client));
-    os_memset(info.version, '\0', sizeof(info.version));
-
-    os_memcpy(info.uuid, OTA_UUID, MIN(sizeof(info.uuid), strlen(OTA_UUID)));
-    os_memcpy(info.token, OTA_TOKEN, MIN(sizeof(info.token), strlen(OTA_TOKEN)));
-    os_memcpy(info.client, OTA_CLIENT, MIN(sizeof(info.client), strlen(OTA_CLIENT)));
-    os_memcpy(info.version, OTA_VERSION, MIN(sizeof(info.version), strlen(OTA_VERSION)));
-
-    start_fota(&info);
+    start_fota(*fota_client, INTERVAL, UPDATE_SERVER_IP, UPDATE_SERVER_PORT, OTA_UUID, OTA_TOKEN);
   }
   else {
     os_timer_disarm(&connect_check_timer);

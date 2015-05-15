@@ -17,8 +17,6 @@ LOCAL ip_addr_t esp_server_ip;
 LOCAL void ICACHE_FLASH_ATTR
 user_esp_platform_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 {
-    // struct espconn *pespconn = (struct espconn *)arg;
-
     if (ipaddr == NULL) {
         os_printf("user_esp_platform_dns_found NULL\n");
         return;
