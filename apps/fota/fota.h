@@ -20,8 +20,13 @@ Version: %s\r\n"
 #define TOKEN_LEN   161
 #define VERSION_LEN VERSION_BYTE_STR
 
-#define HOST_LEN    30
-#define URL_LEN     100
+#define VERSION_DIGIT_MAX   255             // max value of 1B
+#define VERSION_BYTE        3               // MAJOR.MINOR.PATCH
+
+#define HOST_LEN      30
+#define URL_LEN       100
+#define VERSION_LEN   (VERSION_BYTE*3+(VERSION_BYTE-1)+1)       // xxx.xxx.xxx\0
+#define PROTOCOL_LEN  6 
 
 typedef struct {
   ip_addr_t ip;
@@ -33,13 +38,15 @@ typedef struct {
   struct espconn *conn;
   os_timer_t periodic;
   os_timer_t request_timeout;
+  struct fota_cdn_t fw_server;
 } fota_client_t;
 
 typedef struct {
   char *host;
   char *url;
-  ip_addr_t server;
+  ip_addr_t ip;
   uint16_t port;
+  uint8_t secure;
 } fota_cdn_t
 
 void start_fota(fota_client_t *client, uint16_t interval, char *host, uint16_t port, char *id, char* token);

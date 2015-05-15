@@ -22,8 +22,9 @@ jsoneq(const char *json, jsmntok_t *tok, const char *s) {
 }
 
 int8_t  ICACHE_FLASH_ATTR
-parse_fota(const char *json, uint32_t len, uint32_t *version, char *host, char *url)
+parse_fota(const char *json, uint32_t len, char *version, char *host, char *url, char *protocol)
 {
+  int count = 0;
   int i;
   int r;
   jsmn_parser par;
@@ -51,26 +52,35 @@ parse_fota(const char *json, uint32_t len, uint32_t *version, char *host, char *
       for (j = 1; j < tok[i+1].size; j++) {
         if (jsoneq(json, &tok[i+j+1], "version") == 0) {
           uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
-          if (len > VERSION_BYTE_STR) {
-            INFO("Version information (%d bytes vs %d) is too long\n", len, VERSION_BYTE_STR);
-            return FAILED;
-          }
-          char *s = (char*)os_zalloc(len+1);
-          os_strncpy(s, (char*)(json+ tok[i+j+2].start), len);
-          int32_t version = convert_version(s, len);
-          os_free(s);
-          if (version < 0) {
-            INFO("Invalid responsed version value\n");
-            return FAILED;
-          }
-          return version;
+          version = (char*) os_zalloc(len+1)
+          os_strncpy(version, (char*)(json+ tok[i+j+2].start), len);
+          count += 1;
+        }
+        if (jsoneq(json, &tok[i+j+1], "host") == 0) {
+          uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
+          host = (char*) os_zalloc(len+1)
+          os_strncpy(host, (char*)(json+ tok[i+j+2].start), len);          
+          count += 1;
+        }
+        if (jsoneq(json, &tok[i+j+1], "url") == 0) {
+          uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
+          url = (char*) os_zalloc(len+1)
+          os_strncpy(url, (char*)(json+ tok[i+j+2].start), len);          
+          count += 1;
+        }
+        if (jsoneq(json, &tok[i+j+1], "protocol") == 0) {
+          uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
+          protocol = (char*) os_zalloc(len+1)
+          os_strncpy(protocol, (char*)(json+ tok[i+j+2].start), len);          
+          count += 1;
         }
         j++;
       }
       i += tok[i+1].size + 1;
     }
   }
-  return FAILED;
+
+  return (count == 4)?SUCCESS:FAILED;
 }
 
 int8_t ICACHE_FLASH_ATTR

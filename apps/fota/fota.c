@@ -23,7 +23,7 @@ LOCAL void upDate_discon_cb(void *arg);
 LOCAL void upDate_connect_cb(void *arg);
 
 static fota_client_t fota_client;
-static int32_t version_fwr;
+static uint32_t version_fwr;
 
 LOCAL void ICACHE_FLASH_ATTR
 clear_tcp_of_espconn(struct espconn *conn) {
@@ -78,28 +78,50 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   uint32_t bodylen = os_strlen(body);
 
   /* parse json, get version */  
-  int32_t version;
-  char *fw_host, *fw_url;
-  if (parse_fota(body, bodylen, &version, fw_host, fw_url) < 0)
+  char *n_host,
+       *n_url,
+       *n_version,
+       *n_protocol;
+
+  if (parse_fota(body, bodylen, n_version, n_host, n_url, n_protocol) < 0) {
     INFO("Invalid response\n");
-    return;
+    goto CLEAN_MEM;
   }
-  /* then, we have version response */  
+
+  /* then, we have valide JSON response */  
   // disable data receiving timeout handing
   // and close connection 
   os_timer_disarm(&fota_client->request_timeout);
   clear_tcp_of_espconn(fota_client->conn);
 
-  /* if we have newer version, disable timeout, and call get firmware session */
-  if (version > version_fwr) {
-    INFO("Starting update new firmware\n");
-    // start_session(firmware_espconn, upDate_connect_cb, upDate_discon_cb);
+  uint32_t version;
+  if (convert_version(n_version, os_strlen(n_version), &version) < 0) {
+    REPORT("Invalide version return %s\n", n_version);
+    goto CLEAN_MEM;
   }
-  else {
+
+  /* if we still have lastest version */
+  if (version <= version_fwr) {
     INFO("We have lastest firmware (current %u.%u.%u vs online %u.%u.%u)\n", 
       (version_fwr/256/256)%256, (version_fwr/256)%256, version_fwr%256
       (version/256/256)%256, (version/256)%256, version%256);
+    goto CLEAN_MEM;
   }
+
+  if (os_strncmp(n_protocol, "https", os_strlen("https"))
+    fota_client->fw_server.secure = 1;
+  else
+    fota_client->fw_server.secure = 0;
+
+  // copy 
+  fota_client->fw_server.host = n_host;
+  fota_client->fw_server.url = n_url;
+
+CLEAN_MEM:
+  if (n_host) os_free(n_host);
+  if (n_url) os_free(n_url);
+  if (n_version) os_free(n_version);
+  if (n_protocol) os_free(n_protocol);
 }
 
 /**
