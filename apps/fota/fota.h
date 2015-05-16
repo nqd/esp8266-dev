@@ -32,6 +32,8 @@ typedef struct {
   ip_addr_t ip;
   uint16_t port;
   uint8_t secure;
+  struct espconn *conn;
+  struct upgrade_server_info *up_server;
 } fota_cdn_t;
 
 typedef struct {

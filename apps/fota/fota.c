@@ -116,9 +116,14 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   else
     fota_client->fw_server.secure = 0;
 
+  fota_client->fw_server.port = 80;         // default of any cdn
   // copy 
   fota_client->fw_server.host = n_host;
   fota_client->fw_server.url = n_url;
+  // we still use n_host and n_url, just clean n_version and n_protocol
+  if (n_version) os_free(n_version);
+  if (n_protocol) os_free(n_protocol);
+  return;
 
 CLEAN_MEM:
   if (n_host) os_free(n_host);
@@ -225,6 +230,8 @@ LOCAL void ICACHE_FLASH_ATTR
 upDate_rsp(void *arg)
 {
   struct upgrade_server_info *server = arg;
+  struct espconn *pespconn = server->pespconn;
+  fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
 
   if(server->upgrade_flag == true) {
     REPORT("device_upgrade_success\n");
@@ -237,7 +244,11 @@ upDate_rsp(void *arg)
   // clear upgrade connection
   clear_upgradeconn(server);
   // we can close it now, start from client
-  clear_tcp_of_espconn(firmware_espconn);
+  clear_tcp_of_espconn(pespconn);
+  if (pespconn) os_free(pespconn);
+  // clear url and host
+  if (fota_cdn->host) os_free(fota_cdn->host);
+  if (fota_cdn->url) os_free(fota_cdn->url);
 }
 
 /**
@@ -248,10 +259,17 @@ upDate_rsp(void *arg)
 LOCAL void ICACHE_FLASH_ATTR
 upDate_discon_cb(void *arg)
 {
+  struct espconn *pespconn = (struct espconn *)arg;
+  fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
   // clear upgrade connection
-  clear_upgradeconn(upServer);
+  clear_upgradeconn(fota_cdn->up_server);
   // we can close it now, start from client
-  clear_tcp_of_espconn(firmware_espconn);
+  clear_tcp_of_espconn(pespconn);
+  if (pespconn) os_free(pespconn);
+  // clear url and host
+  if (fota_cdn->host) os_free(fota_cdn->host);
+  if (fota_cdn->url) os_free(fota_cdn->url);
+  
   INFO("update disconnect\n");
 }
 
@@ -264,41 +282,32 @@ LOCAL void ICACHE_FLASH_ATTR
 upDate_connect_cb(void *arg)
 {
   struct espconn *pespconn = (struct espconn *)arg;
+  fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
   char temp[32] = {0};
   uint8_t i = 0;
 
   system_upgrade_init();
 
-  INFO("+CIPUPDATE:3\n");
-
-  upServer = (struct upgrade_server_info *)os_zalloc(sizeof(struct upgrade_server_info));
+  fota_cdn->up_server = (struct upgrade_server_info *)os_zalloc(sizeof(struct upgrade_server_info));
 
   // todo:
-  upServer->upgrade_version[5] = '\0';
-  upServer->pespconn = pespconn;
-  os_memcpy(upServer->ip, pespconn->proto.tcp->remote_ip, 4);
-  upServer->port = fota_client.port;        // todo: get from meta data
-  upServer->check_cb = upDate_rsp;
-  upServer->check_times = 60000;
+  fota_cdn->up_server->upgrade_version[5] = '\0';
+  fota_cdn->up_server->pespconn = pespconn;
+  os_memcpy(fota_cdn->up_server->ip, pespconn->proto.tcp->remote_ip, 4);
+  fota_cdn->up_server->port = fota_cdn->port;
+  fota_cdn->up_server->check_cb = upDate_rsp;
+  fota_cdn->up_server->check_times = 60000;
 
-  if(upServer->url == NULL) {
-    upServer->url = (uint8 *) os_zalloc(1024);
+  if(fota_cdn->up_server->url == NULL) {
+    fota_cdn->up_server->url = (uint8 *) os_zalloc(1024);
   }
 
-  uint8_t user_bin[12] = {0};
-  if(system_upgrade_userbin_check() == UPGRADE_FW_BIN1) {
-    os_memcpy(user_bin, "user2.bin", 10);
-  }
-  else if(system_upgrade_userbin_check() == UPGRADE_FW_BIN2) {
-    os_memcpy(user_bin, "user1.bin", 10);
-  }
-
-  os_sprintf(upServer->url,
-        "GET /%s HTTP/1.1\r\nHost: "IPSTR"\r\n"pHeadStatic"\r\n",
-        user_bin, IP2STR(upServer->ip));
+  os_sprintf(fota_cdn->up_server->url,
+        "GET /%s HTTP/1.1\r\nHost: %s\r\n"pHeadStatic"\r\n",
+        fota_cdn->url, fota_cdn->host);
 
   if(system_upgrade_start(upServer) != false) {
-    INFO("+CIPUPDATE:4\n");
+    INFO("Fail to start system upgrade\n");
   }
 }
 
