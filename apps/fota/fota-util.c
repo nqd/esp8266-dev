@@ -13,10 +13,20 @@
 #define SUCCESS   0
 
 
-LOCAL int ICACHE_FLASH_ATTR
+LOCAL int8_t ICACHE_FLASH_ATTR
 jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   if (tok->type == JSMN_STRING && (int) os_strlen(s) == tok->end - tok->start &&
       strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
+    return 0;
+  }
+  return -1;
+}
+LOCAL int8_t ICACHE_FLASH_ATTR
+json_get_value(const char *json, jsmntok_t *tok, const char *key, char *value) {
+  if (jsoneq(json, tok, key) == 0 && tok[1].type == JSMN_STRING) {
+    uint32_t len = tok[1].end-tok[1].start;
+    value = (char*) os_zalloc(len+1);
+    os_strncpy(value, (char*)(json+ tok[1].start), len);
     return 0;
   }
   return -1;
@@ -30,6 +40,12 @@ parse_fota(const char *json, uint32_t len, char *version, char *host, char *url,
   int r;
   jsmn_parser par;
   jsmntok_t tok[128]; /* We expect no more than 128 tokens */
+
+  // prepare pointer
+  version = NULL;
+  host = NULL;
+  url = NULL;
+  protocol = NULL;
 
   jsmn_init(&par);
   r = jsmn_parse(&par, json, len, tok, sizeof(tok)/sizeof(tok[0]));
@@ -46,42 +62,35 @@ parse_fota(const char *json, uint32_t len, char *version, char *host, char *url,
   for (i = 1; i < r; i++) {
     if (jsoneq(json, &tok[i], "last") == 0) {
       // We expect groups to be an object
-      if (tok[i+1].type != JSMN_OBJECT) {
+      if (tok[i+1].type != JSMN_OBJECT)
         continue;
-      }
+
       int j;
-      for (j = 1; j < tok[i+1].size; j++) {
-        if (jsoneq(json, &tok[i+j+1], "version") == 0) {
-          uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
-          version = (char*) os_zalloc(len+1);
-          os_strncpy(version, (char*)(json+ tok[i+j+2].start), len);
+      int z=0;
+      for (j = 0; j < tok[i+1].size; j++) {
+        if (json_get_value(json, &tok[i+z+2], "version", version) ==0)
           count += 1;
-        }
-        if (jsoneq(json, &tok[i+j+1], "host") == 0) {
-          uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
-          host = (char*) os_zalloc(len+1);
-          os_strncpy(host, (char*)(json+ tok[i+j+2].start), len);          
+        else if (json_get_value(json, &tok[i+z+2], "host", version) == 0)
           count += 1;
-        }
-        if (jsoneq(json, &tok[i+j+1], "url") == 0) {
-          uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
-          url = (char*) os_zalloc(len+1);
-          os_strncpy(url, (char*)(json+ tok[i+j+2].start), len);          
+        else if (json_get_value(json, &tok[i+z+2], "url", version) == 0)
           count += 1;
-        }
-        if (jsoneq(json, &tok[i+j+1], "protocol") == 0) {
-          uint32_t len = tok[i+j+2].end-tok[i+j+2].start;
-          protocol = (char*) os_zalloc(len+1);
-          os_strncpy(protocol, (char*)(json+ tok[i+j+2].start), len);          
+        else if (json_get_value(json, &tok[i+z+2], "protocol", version) == 0)
           count += 1;
-        }
-        j++;
+
+        z += 2;     // we expect key: value under last object
       }
-      i += tok[i+1].size + 1;
     }
   }
-
-  return (count == 4)?SUCCESS:FAILED;
+  // clean up malloc when parsing failed
+  if (count < 4) {
+    if (version) os_free(version);
+    if (host) os_free(host);
+    if (url) os_free(url);
+    if (protocol) os_free(protocol);
+    return FAILED;
+  }
+  else
+    return SUCCESS;
 }
 
 int8_t ICACHE_FLASH_ATTR
