@@ -5,13 +5,16 @@
 #include "mem.h"
 #include "upgrade.h"
 
-#include "driver/uart.h"
-
 #include "jsmn.h"         // json parsing
 #include "utils.h"
 
 #include "fota.h"
 #include "fota-util.h"
+
+unsigned char *default_certificate;
+unsigned int default_certificate_len = 0;
+unsigned char *default_private_key;
+unsigned int default_private_key_len = 0;
 
 static is_running = 0;
 
