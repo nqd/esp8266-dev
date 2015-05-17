@@ -56,7 +56,7 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   // disable data receiving timeout handing
   // and close connection 
   os_timer_disarm(&fota_client->request_timeout);
-  clear_tcp_of_espconn(fota_client->conn);
+  clear_espconn(fota_client->conn);
 
   uint32_t version;
   if (convert_version(n_version, os_strlen(n_version), &version) < 0) {
@@ -77,10 +77,10 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   start_cdn(&fota_client->fw_server, n_version, n_host, n_url, n_protocol);
 
 CLEAN_MEM:
-  if (n_host!=NULL) os_free(n_host);
-  if (n_url!=NULL) os_free(n_url);
-  if (n_version!=NULL) os_free(n_version);
-  if (n_protocol!=NULL) os_free(n_protocol);
+  FREE(n_host);
+  FREE(n_url);
+  FREE(n_version);
+  FREE(n_protocol);
 }
 
 /**
@@ -97,7 +97,7 @@ get_version_timeout(void *arg)
   os_timer_disarm(&fota_client->request_timeout);
 
   INFO("get version timeout, close connection\n");
-  clear_tcp_of_espconn(pespconn);
+  clear_espconn(pespconn);
 }
 
 /**
@@ -127,7 +127,7 @@ void ICACHE_FLASH_ATTR
 get_version_disconnect_cb(void *arg)
 {
   INFO("FOTA Client: disconnect\n");
-  clear_tcp_of_espconn((struct espconn *)arg);
+  clear_espconn((struct espconn *)arg);
 }
 
 /**
@@ -170,5 +170,5 @@ get_version_connect_cb(void *arg)
 #else
   espconn_sent(pespconn, temp, os_strlen(temp));
 #endif
-  os_free(temp);
+  FREE(temp);
 }

@@ -21,11 +21,9 @@ clear_upgradeconn(struct upgrade_server_info *server)
 {
   if (server != NULL) {
     if (server->url != NULL) {
-      os_free(server->url);
-      server->url = NULL;
+      FREE(server->url);
     }
-    os_free(server);
-    server = NULL;
+    FREE(server);
   }
 }
 
@@ -67,11 +65,10 @@ upgrade_response(void *arg)
   // clear upgrade connection
   clear_upgradeconn(server);
   // we can close it now, start from client
-  clear_tcp_of_espconn(pespconn);
-  if (pespconn) os_free(pespconn);
+  clear_espconn(pespconn);
   // clear url and host
-  if (fota_cdn->host) os_free(fota_cdn->host);
-  if (fota_cdn->url) os_free(fota_cdn->url);
+  FREE(fota_cdn->host);
+  FREE(fota_cdn->url);
 }
 
 /**
@@ -87,11 +84,10 @@ upgrade_discon_cb(void *arg)
   // clear upgrade connection
   clear_upgradeconn(fota_cdn->up_server);
   // we can close it now, start from client
-  clear_tcp_of_espconn(pespconn);
-  if (pespconn) os_free(pespconn);
+  clear_espconn(pespconn);
   // clear url and host
-  if (fota_cdn->host) os_free(fota_cdn->host);
-  if (fota_cdn->url) os_free(fota_cdn->url);
+  FREE(fota_cdn->host);
+  FREE(fota_cdn->url);
 
   INFO("FOTA Client: disconnect\n");
 }
@@ -115,7 +111,7 @@ upgrade_connect_cb(void *arg)
 
   fota_cdn->up_server = (struct upgrade_server_info *)os_zalloc(sizeof(struct upgrade_server_info));
 
-  fota_cdn->up_server->upgrade_version[5] = '\0';
+  fota_cdn->up_server->upgrade_version[5] = '\0';       // no, we dont use this
   fota_cdn->up_server->pespconn = pespconn;
   os_memcpy(fota_cdn->up_server->ip, pespconn->proto.tcp->remote_ip, 4);
   fota_cdn->up_server->port = fota_cdn->port;
@@ -138,6 +134,8 @@ upgrade_connect_cb(void *arg)
 void ICACHE_FLASH_ATTR
 start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *protocol)
 {
+  os_memset(fota_cdn, '\0', sizeof(fota_cdn_t));
+
   if (os_strncmp(protocol, "https", os_strlen("https")))
     fota_cdn->secure = 1;
   else
@@ -145,21 +143,11 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
 
   fota_cdn->port = 80;         // default of any cdn
 
-  if (fota_cdn->host != NULL)
-    os_free(fota_cdn->host);
-
   fota_cdn->host = (char*)os_zalloc(os_strlen(host)+1);
   os_strncpy(fota_cdn->host, host, os_strlen(host));
 
-  if (fota_cdn->url != NULL)
-    os_free(fota_cdn->url);
-
   fota_cdn->url = (char*)os_zalloc(os_strlen(url)+1);
   os_strncpy(fota_cdn->url, url, os_strlen(url));
-
-  // connection
-  if (fota_cdn->conn != NULL)
-    os_free(fota_cdn->conn);
 
   fota_cdn->conn = (struct espconn *)os_zalloc(sizeof(struct espconn));
   fota_cdn->conn->reverse = fota_cdn;

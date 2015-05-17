@@ -3,14 +3,11 @@
 #include "user_interface.h"
 #include "espconn.h"
 #include "mem.h"
-#include "upgrade.h"
 
-#include "jsmn.h"         // json parsing
 #include "utils.h"
 
 #include "fota.h"
 #include "fota-info.h"
-#include "fota-firmware.h"
 #include "fota-util.h"
 
 unsigned char *default_certificate;
@@ -44,8 +41,17 @@ fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 LOCAL void ICACHE_FLASH_ATTR
 fota_ticktock(fota_client_t *fota_client)
 {
+  // connection
+  fota_client->conn = (struct espconn *)os_zalloc(sizeof(struct espconn));
+  fota_client->conn->reverse = fota_client;
+  fota_client->conn->type = ESPCONN_TCP;
+  fota_client->conn->state = ESPCONN_NONE;
+
+  espconn_regist_connectcb(fota_client->conn, get_version_connect_cb);
+  // espconn_regist_reconcb(fota_client->conn, get_version_disconnect_cb);
+  espconn_regist_disconcb(fota_client->conn, get_version_disconnect_cb);
+
   // new tcp connection
-  // remember to clean tcp connection after each using
   fota_client->conn->proto.tcp = (esp_tcp *)os_zalloc(sizeof(esp_tcp));
   fota_client->conn->proto.tcp->local_port = espconn_port();
   fota_client->conn->proto.tcp->remote_port = fota_client->port;
@@ -95,16 +101,6 @@ start_fota(fota_client_t *fota_client, uint16_t interval, char *host, uint16_t p
   // token
   fota_client->token = (char*)os_zalloc(os_strlen(token)+1);
   os_memcpy(fota_client->token, token, os_strlen(token));
-
-  // connection
-  fota_client->conn = (struct espconn *)os_zalloc(sizeof(struct espconn));
-  fota_client->conn->reverse = fota_client;
-  fota_client->conn->type = ESPCONN_TCP;
-  fota_client->conn->state = ESPCONN_NONE;
-
-  espconn_regist_connectcb(fota_client->conn, get_version_connect_cb);
-  // espconn_regist_reconcb(fota_client->conn, get_version_disconnect_cb);
-  espconn_regist_disconcb(fota_client->conn, get_version_disconnect_cb);
 
   os_timer_disarm(&fota_client->periodic);
   os_timer_setfn(&fota_client->periodic, (os_timer_func_t *)fota_ticktock, fota_client);

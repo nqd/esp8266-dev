@@ -54,7 +54,7 @@ typedef struct {
   fota_cdn_t fw_server;
 } fota_client_t;
 
-
 void start_fota(fota_client_t *client, uint16_t interval, char *host, uint16_t port, char *id, char* token);
+void stop_fota(fota_client_t *client);
 
 #endif

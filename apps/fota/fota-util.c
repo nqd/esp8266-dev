@@ -92,10 +92,10 @@ parse_fota(const char *json, uint32_t len, char **version, char **host, char **u
   }
   // clean up malloc when parsing failed
   if (count < 4) {
-    if (*version!=NULL) os_free(*version);
-    if (*host!=NULL) os_free(*host);
-    if (*url!=NULL) os_free(*url);
-    if (*protocol!=NULL) os_free(*protocol);
+    FREE(*version);
+    FREE(*host);
+    FREE(*url);
+    FREE(*protocol);
     return FAILED;
   }
   else
@@ -149,14 +149,12 @@ else
 }
 
 void ICACHE_FLASH_ATTR
-clear_tcp_of_espconn(struct espconn *conn) {
+clear_espconn(struct espconn *conn) {
   if (conn != NULL) {
     if (conn->proto.tcp != NULL) {
-      os_free(conn->proto.tcp);
-      conn->proto.tcp = NULL;
+      FREE(conn->proto.tcp);
     }
-    // os_free(conn);
-    // conn = NULL;
+    FREE(conn);
   }
 }
 
