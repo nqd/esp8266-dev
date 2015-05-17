@@ -2,6 +2,7 @@
 #include "c_types.h"
 #include "user_interface.h"
 #include "mem.h"
+#include "espconn.h"
 
 // json parsing
 #include "jsmn.h"
@@ -21,6 +22,7 @@ jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   }
   return -1;
 }
+
 LOCAL int8_t ICACHE_FLASH_ATTR
 json_get_value(const char *json, jsmntok_t *tok, const char *key, char **value) {
   if (jsoneq(json, tok, key) == 0 && tok[1].type == JSMN_STRING) {
@@ -136,3 +138,25 @@ convert_version(const char *version_str, uint32_t len, uint32_t *version_bin)
   }
   return SUCCESS;
 }
+
+void ICACHE_FLASH_ATTR
+start_esp_connect(struct espconn *conn, uint8_t secure)
+{
+if (secure)
+  espconn_secure_connect(conn);
+else
+  espconn_connect(conn);
+}
+
+void ICACHE_FLASH_ATTR
+clear_tcp_of_espconn(struct espconn *conn) {
+  if (conn != NULL) {
+    if (conn->proto.tcp != NULL) {
+      os_free(conn->proto.tcp);
+      conn->proto.tcp = NULL;
+    }
+    // os_free(conn);
+    // conn = NULL;
+  }
+}
+
