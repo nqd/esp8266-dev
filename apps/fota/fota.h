@@ -29,7 +29,6 @@ Version: %s\r\n"
 typedef struct {
   char *host;
   char *url;
-  ip_addr_t ip;
   uint16_t port;
   uint8_t secure;
   struct espconn *conn;
@@ -37,7 +36,6 @@ typedef struct {
 } fota_cdn_t;
 
 typedef struct {
-  ip_addr_t ip;
   uint16_t port;
   char *uuid;
   char *token;
