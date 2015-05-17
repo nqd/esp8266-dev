@@ -6,11 +6,11 @@
 #include "upgrade.h"
 
 #include "fota.h"
-#include "fota-cdn.h"
+#include "fota-firmware.h"
 #include "fota-util.h"
 
-LOCAL void upDate_discon_cb(void *arg);
-LOCAL void upDate_connect_cb(void *arg);
+LOCAL void upgrade_discon_cb(void *arg);
+LOCAL void upgrade_connect_cb(void *arg);
 
 /************************************************************************************
  * GET FIRMWARE
@@ -30,7 +30,7 @@ clear_upgradeconn(struct upgrade_server_info *server)
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-cdn_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
+upgrade_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 {
   if(ipaddr == NULL) {
     INFO("DNS: Found, but got no ip\n");
@@ -50,7 +50,7 @@ cdn_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-upDate_rsp(void *arg)
+upgrade_response(void *arg)
 {
   struct upgrade_server_info *server = arg;
   struct espconn *pespconn = server->pespconn;
@@ -80,7 +80,7 @@ upDate_rsp(void *arg)
   * @retval None
   */
 LOCAL void ICACHE_FLASH_ATTR
-upDate_discon_cb(void *arg)
+upgrade_discon_cb(void *arg)
 {
   struct espconn *pespconn = (struct espconn *)arg;
   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
@@ -102,7 +102,7 @@ upDate_discon_cb(void *arg)
   * @retval None
   */
 LOCAL void ICACHE_FLASH_ATTR
-upDate_connect_cb(void *arg)
+upgrade_connect_cb(void *arg)
 {
   struct espconn *pespconn = (struct espconn *)arg;
   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
@@ -119,7 +119,7 @@ upDate_connect_cb(void *arg)
   fota_cdn->up_server->pespconn = pespconn;
   os_memcpy(fota_cdn->up_server->ip, pespconn->proto.tcp->remote_ip, 4);
   fota_cdn->up_server->port = fota_cdn->port;
-  fota_cdn->up_server->check_cb = upDate_rsp;
+  fota_cdn->up_server->check_cb = upgrade_response;
   fota_cdn->up_server->check_times = 60000;
 
   if(fota_cdn->up_server->url == NULL) {
@@ -169,9 +169,9 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
   fota_cdn->conn->proto.tcp->local_port = espconn_port();
   fota_cdn->conn->proto.tcp->remote_port = fota_cdn->port;
 
-  espconn_regist_connectcb(fota_cdn->conn, upDate_connect_cb);
-  // espconn_regist_reconcb(fota_client->conn, upDate_discon_cb);
-  espconn_regist_disconcb(fota_cdn->conn, upDate_discon_cb);
+  espconn_regist_connectcb(fota_cdn->conn, upgrade_connect_cb);
+  // espconn_regist_reconcb(fota_client->conn, upgrade_discon_cb);
+  espconn_regist_disconcb(fota_cdn->conn, upgrade_discon_cb);
 
   // if ip address is provided, go ahead
   if (UTILS_StrToIP(fota_cdn->host, &fota_cdn->conn->proto.tcp->remote_ip)) {
@@ -185,6 +185,6 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
     espconn_gethostbyname(fota_cdn->conn,
       fota_cdn->host,
       (ip_addr_t *) &fota_cdn->conn->proto.tcp->remote_ip,
-      cdn_dns_found);
+      upgrade_dns_found);
   }
 }
