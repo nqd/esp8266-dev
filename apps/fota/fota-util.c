@@ -25,6 +25,10 @@ LOCAL int8_t ICACHE_FLASH_ATTR
 json_get_value(const char *json, jsmntok_t *tok, const char *key, char **value) {
   if (jsoneq(json, tok, key) == 0 && tok[1].type == JSMN_STRING) {
     uint32_t len = tok[1].end-tok[1].start;
+    // clean memory if *value is allocated before
+    if (*value != NULL)
+      os_free(*value);
+
     *value = (char*) os_zalloc(len+1);
     os_strncpy(*value, (char*)(json+ tok[1].start), len);
     // INFO("%s: %s\n", key, *value);

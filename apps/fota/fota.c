@@ -298,7 +298,6 @@ upDate_connect_cb(void *arg)
 
   fota_cdn->up_server = (struct upgrade_server_info *)os_zalloc(sizeof(struct upgrade_server_info));
 
-  // todo:
   fota_cdn->up_server->upgrade_version[5] = '\0';
   fota_cdn->up_server->pespconn = pespconn;
   os_memcpy(fota_cdn->up_server->ip, pespconn->proto.tcp->remote_ip, 4);
