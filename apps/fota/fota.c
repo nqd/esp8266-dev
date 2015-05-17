@@ -86,15 +86,19 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
        *n_version,
        *n_protocol;
 
-  if (parse_fota(body, bodylen, n_version, n_host, n_url, n_protocol) < 0) {
+  if (parse_fota(body, bodylen, &n_version, &n_host, &n_url, &n_protocol) < 0) {
     INFO("Invalid response\n");
     goto CLEAN_MEM;
   }
+  INFO("Version %s\n", n_version);
+  INFO("Host %s\n", n_host);
+  INFO("URL %s\n", n_url);
+  INFO("Protocol %s\n", n_protocol);
 
   /* then, we have valide JSON response */  
   // disable data receiving timeout handing
   // and close connection 
-  os_timer_disarm(&(fota_client->request_timeout));
+  os_timer_disarm(&fota_client->request_timeout);
   clear_tcp_of_espconn(fota_client->conn);
 
   uint32_t version;
@@ -111,6 +115,8 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
     goto CLEAN_MEM;
   }
 
+  INFO("Prepare to get firmware\n");
+
   if (os_strncmp(n_protocol, "https", os_strlen("https")))
     fota_client->fw_server.secure = 1;
   else
@@ -126,10 +132,10 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   return;
 
 CLEAN_MEM:
-  if (n_host) os_free(n_host);
-  if (n_url) os_free(n_url);
-  if (n_version) os_free(n_version);
-  if (n_protocol) os_free(n_protocol);
+  if (n_host!=NULL) os_free(n_host);
+  if (n_url!=NULL) os_free(n_url);
+  if (n_version!=NULL) os_free(n_version);
+  if (n_protocol!=NULL) os_free(n_protocol);
 }
 
 /**
@@ -164,7 +170,7 @@ get_version_sent_cb(void *arg)
   os_timer_disarm(&fota_client->request_timeout);
   os_timer_setfn(&fota_client->request_timeout, (os_timer_func_t *)get_version_timeout, pespconn);
   os_timer_arm(&fota_client->request_timeout, 5000, 0);
-  INFO("get version sent cb\n");
+  INFO("FOTA Client: sent request\n");
 }
 
 /**
@@ -175,7 +181,7 @@ get_version_sent_cb(void *arg)
 LOCAL void ICACHE_FLASH_ATTR
 get_version_disconnect_cb(void *arg)
 {
-  INFO("get version disconnect tcp\n");
+  INFO("FOTA Client: disconnect\n");
   clear_tcp_of_espconn((struct espconn *)arg);
 }
 
@@ -195,10 +201,10 @@ get_version_connect_cb(void *arg)
 
   uint8_t user_bin[12] = {0};
   if(system_upgrade_userbin_check() == UPGRADE_FW_BIN1) {
-    os_memcpy(user_bin, "user2.bin", 10);
+    os_memcpy(user_bin, "user1.bin", 10);
   }
   else if(system_upgrade_userbin_check() == UPGRADE_FW_BIN2) {
-    os_memcpy(user_bin, "user1.bin", 10);
+    os_memcpy(user_bin, "user2.bin", 10);
   }
 
   char *temp = NULL;
@@ -215,9 +221,9 @@ get_version_connect_cb(void *arg)
     );
 
 #if (FOTA_SECURE)
-  espconn_sent(pespconn, temp, os_strlen(temp));
-#else
   espconn_secure_sent(pespconn, temp, os_strlen(temp));
+#else
+  espconn_sent(pespconn, temp, os_strlen(temp));
 #endif
   os_free(temp);
 }
@@ -269,8 +275,8 @@ upDate_discon_cb(void *arg)
   // clear url and host
   if (fota_cdn->host) os_free(fota_cdn->host);
   if (fota_cdn->url) os_free(fota_cdn->url);
-  
-  INFO("update disconnect\n");
+
+  INFO("FOTA Client: disconnect\n");
 }
 
 /**
@@ -285,6 +291,8 @@ upDate_connect_cb(void *arg)
   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
   char temp[32] = {0};
   uint8_t i = 0;
+
+  INFO("FOTA Client: connected\n");
 
   system_upgrade_init();
 
@@ -363,7 +371,7 @@ fota_ticktock(fota_client_t *fota_client)
 
   // if ip address is provided, go ahead
   if (UTILS_StrToIP(fota_client->host, &fota_client->ip)) {
-    INFO("FOTA client: Connect to ip  %s:%d\r\n", fota_client->host, fota_client->port);
+    INFO("FOTA client: Connect to ip %s:%d\r\n", fota_client->host, fota_client->port);
     // check for new version
     start_session(fota_client, get_version_connect_cb, get_version_disconnect_cb);
   }

@@ -21,7 +21,10 @@ http.createServer(function(request, response) {
         {
           version: "1.0.2",
           updated: 1430135590467,
-          url: "/firmware/otaupdate/versions/1.0.2"
+          url: "/firmware/otaupdate/versions/1.0.2",
+          protocol: "http",
+          host: "192.168.1.178",
+          url: "/user2"
         }
     }
     response.write(JSON.stringify(res));

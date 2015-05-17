@@ -22,18 +22,19 @@ jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   return -1;
 }
 LOCAL int8_t ICACHE_FLASH_ATTR
-json_get_value(const char *json, jsmntok_t *tok, const char *key, char *value) {
+json_get_value(const char *json, jsmntok_t *tok, const char *key, char **value) {
   if (jsoneq(json, tok, key) == 0 && tok[1].type == JSMN_STRING) {
     uint32_t len = tok[1].end-tok[1].start;
-    value = (char*) os_zalloc(len+1);
-    os_strncpy(value, (char*)(json+ tok[1].start), len);
+    *value = (char*) os_zalloc(len+1);
+    os_strncpy(*value, (char*)(json+ tok[1].start), len);
+    // INFO("%s: %s\n", key, *value);
     return 0;
   }
   return -1;
 }
 
 int8_t  ICACHE_FLASH_ATTR
-parse_fota(const char *json, uint32_t len, char *version, char *host, char *url, char *protocol)
+parse_fota(const char *json, uint32_t len, char **version, char **host, char **url, char **protocol)
 {
   int count = 0;
   int i;
@@ -42,10 +43,10 @@ parse_fota(const char *json, uint32_t len, char *version, char *host, char *url,
   jsmntok_t tok[128]; /* We expect no more than 128 tokens */
 
   // prepare pointer
-  version = NULL;
-  host = NULL;
-  url = NULL;
-  protocol = NULL;
+  *version = NULL;
+  *host = NULL;
+  *url = NULL;
+  *protocol = NULL;
 
   jsmn_init(&par);
   r = jsmn_parse(&par, json, len, tok, sizeof(tok)/sizeof(tok[0]));
@@ -67,14 +68,16 @@ parse_fota(const char *json, uint32_t len, char *version, char *host, char *url,
 
       int j;
       int z=0;
+      char value[100];
       for (j = 0; j < tok[i+1].size; j++) {
-        if (json_get_value(json, &tok[i+z+2], "version", version) ==0)
+        if (json_get_value(json, &tok[i+z+2], "version", version) == 0) {
           count += 1;
-        else if (json_get_value(json, &tok[i+z+2], "host", version) == 0)
+        }
+        else if (json_get_value(json, &tok[i+z+2], "host", host) == 0)
           count += 1;
-        else if (json_get_value(json, &tok[i+z+2], "url", version) == 0)
+        else if (json_get_value(json, &tok[i+z+2], "url", url) == 0)
           count += 1;
-        else if (json_get_value(json, &tok[i+z+2], "protocol", version) == 0)
+        else if (json_get_value(json, &tok[i+z+2], "protocol", protocol) == 0)
           count += 1;
 
         z += 2;     // we expect key: value under last object
@@ -83,10 +86,10 @@ parse_fota(const char *json, uint32_t len, char *version, char *host, char *url,
   }
   // clean up malloc when parsing failed
   if (count < 4) {
-    if (version) os_free(version);
-    if (host) os_free(host);
-    if (url) os_free(url);
-    if (protocol) os_free(protocol);
+    if (*version!=NULL) os_free(*version);
+    if (*host!=NULL) os_free(*host);
+    if (*url!=NULL) os_free(*url);
+    if (*protocol!=NULL) os_free(*protocol);
     return FAILED;
   }
   else
