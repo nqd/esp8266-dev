@@ -1,11 +1,14 @@
 var http = require("http"),
     url = require("url"),
     path = require("path"),
-    fs = require("fs")
+    fs = require("fs"),
+    url = require("url"),
     port = process.argv[2] || 8888;
 
 var fileUser1 = "/home/nqdinh/esp-fw-ota/user1.bin";
 var fileUser2 = "/home/nqdinh/esp-fw-ota/user2.bin";
+// var fileUser1 = "https://dl.dropboxusercontent.com/s/jwnjhet4tngh3nh/user1.bin?dl=0";
+// var fileUser2 = "https://dl.dropboxusercontent.com/s/o996zg2vmyx3396/user2.bin?dl=0";
 
 http.createServer(function(request, response) {
 
@@ -15,16 +18,43 @@ http.createServer(function(request, response) {
   // console.log("uri = ", uri);
 
   if (uri.pathname == "/firmware/otaupdate/versions") {
+    var image = request.headers.image;
+
+    var fileUser = fileUser2;
+    var retImage = 'user1.bin'
+    if (image == 'user1.bin') {
+      fileUser = fileUser2
+      retImage = 'user2.bin'
+    }
+    else if (image == 'user2.bin') {
+      fileUser = fileUser1
+      retImage = 'user1.bin'
+    }
+    else {
+      console.log("error");
+    }
+
+    // var urlUser = url.parse(fileUser);
+    // var res = {
+    //   application: "otaupdate",
+    //   last:
+    //     {
+    //       version: "1.0.2",
+    //       updated: 1430135590467,
+    //       url: urlUser.path,
+    //       protocol: urlUser.protocol,
+    //       host: urlUser.hostname,
+    //     }
+    // }
     var res = {
       application: "otaupdate",
       last:
         {
           version: "1.0.2",
           updated: 1430135590467,
-          url: "/firmware/otaupdate/versions/1.0.2",
-          protocol: "http",
-          host: "192.168.1.178",
-          url: "/user2"
+          url: retImage,
+          protocol: 'http:',
+          host: '192.168.1.178',
         }
     }
     response.write(JSON.stringify(res));
@@ -41,8 +71,8 @@ http.createServer(function(request, response) {
     }
 
     // testing
-    response.writeHead(404)
-    return response.end();
+    // response.writeHead(404)
+    // return response.end();
     // end testing
 
     console.log(filename)

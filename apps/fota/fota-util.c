@@ -145,6 +145,7 @@ start_esp_connect(struct espconn *conn, uint8_t secure, void *connect_cb, void *
   espconn_regist_connectcb(conn, connect_cb);
   espconn_regist_disconcb(conn, disconnect_cb);
   if (secure) {
+    INFO("Secure connect\n");
     if (espconn_secure_connect(conn) !=0 )
       INFO("Secure connect fail\n");
   }

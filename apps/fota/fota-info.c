@@ -56,7 +56,11 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   // disable data receiving timeout handing
   // and close connection 
   os_timer_disarm(&fota_client->request_timeout);
-  // clear_espconn(fota_client->conn);
+#if (FOTA_SECURE)
+  espconn_secure_disconnect(pespconn);
+#else
+  espconn_disconnect(pespconn);
+#endif
 
   uint32_t version;
   if (convert_version(n_version, os_strlen(n_version), &version) < 0) {
@@ -77,12 +81,10 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   start_cdn(&fota_client->fw_server, n_version, n_host, n_url, n_protocol);
 
 CLEAN_MEM:
-  INFO("clean mem\n");
   FREE(n_host);
   FREE(n_url);
   FREE(n_version);
   FREE(n_protocol);
-  INFO("end clean mem\n");
 }
 
 /**
@@ -99,7 +101,11 @@ get_version_timeout(void *arg)
   os_timer_disarm(&fota_client->request_timeout);
 
   INFO("FOTA Client: Request timeout, close connection\n");
-  clear_espconn(pespconn);
+#if (FOTA_SECURE)
+  espconn_secure_disconnect(pespconn);
+#else
+  espconn_disconnect(pespconn);
+#endif
 }
 
 /**

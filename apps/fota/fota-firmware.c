@@ -28,27 +28,6 @@ clear_upgradeconn(struct upgrade_server_info *server)
 }
 
 LOCAL void ICACHE_FLASH_ATTR
-upgrade_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
-{
-  if(ipaddr == NULL) {
-    INFO("DNS: Found, but got no ip\n");
-    return;
-  }
-
-  INFO("DNS: found ip %d.%d.%d.%d\n",
-      *((uint8 *) &ipaddr->addr),
-      *((uint8 *) &ipaddr->addr + 1),
-      *((uint8 *) &ipaddr->addr + 2),
-      *((uint8 *) &ipaddr->addr + 3));
-
-  struct espconn *pespconn = (struct espconn *)arg;
-  fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
-
-  // check for new version
-  start_esp_connect(fota_cdn->conn, fota_cdn->secure, upgrade_connect_cb, upgrade_discon_cb);
-}
-
-LOCAL void ICACHE_FLASH_ATTR
 upgrade_response(void *arg)
 {
   struct upgrade_server_info *server = arg;
@@ -56,20 +35,17 @@ upgrade_response(void *arg)
   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
 
   if(server->upgrade_flag == true) {
-    REPORT("device_upgrade_success\n");
+    REPORT("Firmware upgrade success\n");
     system_upgrade_reboot();
   }
   else {
-    REPORT("device_upgrade_failed\n");
+    REPORT("Firmware upgrade fail\n");
   }
 
-  // clear upgrade connection
-  clear_upgradeconn(server);
-  // we can close it now, start from client
-  clear_espconn(pespconn);
-  // clear url and host
-  FREE(fota_cdn->host);
-  FREE(fota_cdn->url);
+if (fota_cdn->secure)
+  espconn_secure_disconnect(pespconn);
+else
+  espconn_disconnect(pespconn);
 }
 
 /**
@@ -80,6 +56,8 @@ upgrade_response(void *arg)
 LOCAL void ICACHE_FLASH_ATTR
 upgrade_discon_cb(void *arg)
 {
+  INFO("Firmware client: Disconnect\n");
+
   struct espconn *pespconn = (struct espconn *)arg;
   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
   // clear upgrade connection
@@ -89,8 +67,6 @@ upgrade_discon_cb(void *arg)
   // clear url and host
   FREE(fota_cdn->host);
   FREE(fota_cdn->url);
-
-  INFO("FOTA Client: disconnect\n");
 }
 
 /**
@@ -106,7 +82,7 @@ upgrade_connect_cb(void *arg)
   char temp[32] = {0};
   uint8_t i = 0;
 
-  INFO("FOTA Client: connected\n");
+  INFO("Firmware client: Connected\n");
 
   system_upgrade_init();
 
@@ -132,12 +108,33 @@ upgrade_connect_cb(void *arg)
   }
 }
 
+LOCAL void ICACHE_FLASH_ATTR
+upgrade_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
+{
+  if(ipaddr == NULL) {
+    INFO("DNS: Found, but got no ip\n");
+    return;
+  }
+
+  INFO("DNS: found ip %d.%d.%d.%d\n",
+      *((uint8 *) &ipaddr->addr),
+      *((uint8 *) &ipaddr->addr + 1),
+      *((uint8 *) &ipaddr->addr + 2),
+      *((uint8 *) &ipaddr->addr + 3));
+
+  struct espconn *pespconn = (struct espconn *)arg;
+  fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
+
+  // check for new version
+  start_esp_connect(fota_cdn->conn, fota_cdn->secure, upgrade_connect_cb, upgrade_discon_cb);
+}
+
 void ICACHE_FLASH_ATTR
 start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *protocol)
 {
   os_memset(fota_cdn, '\0', sizeof(fota_cdn_t));
 
-  if (os_strncmp(protocol, "https", os_strlen("https")))
+  if (os_strncmp(protocol, "https", os_strlen("https")) == 0)
     fota_cdn->secure = 1;
   else
     fota_cdn->secure = 0;
@@ -162,13 +159,13 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
 
   // if ip address is provided, go ahead
   if (UTILS_StrToIP(fota_cdn->host, &fota_cdn->conn->proto.tcp->remote_ip)) {
-    INFO("CDN client: Connect to %s:%d\r\n", fota_cdn->host, fota_cdn->port);
+    INFO("Firmware client: Connect to %s:%d\r\n", fota_cdn->host, fota_cdn->port);
     // check for new version
     start_esp_connect(fota_cdn->conn, fota_cdn->secure, upgrade_connect_cb, upgrade_discon_cb);
   }
   // else, use dns query to get ip address
   else {
-    INFO("FOTA client: Connect to domain %s:%d\r\n", fota_cdn->host, fota_cdn->port);
+    INFO("Firmware client: Connect to domain %s:%d\r\n", fota_cdn->host, fota_cdn->port);
     espconn_gethostbyname(fota_cdn->conn,
       fota_cdn->host,
       (ip_addr_t *) &fota_cdn->conn->proto.tcp->remote_ip,
