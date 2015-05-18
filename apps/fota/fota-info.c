@@ -56,7 +56,7 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
   // disable data receiving timeout handing
   // and close connection 
   os_timer_disarm(&fota_client->request_timeout);
-  clear_espconn(fota_client->conn);
+  // clear_espconn(fota_client->conn);
 
   uint32_t version;
   if (convert_version(n_version, os_strlen(n_version), &version) < 0) {
@@ -128,7 +128,7 @@ get_version_sent_cb(void *arg)
 void ICACHE_FLASH_ATTR
 get_version_disconnect_cb(void *arg)
 {
-  INFO("FOTA Client: disconnect\n");
+  INFO("FOTA Client: Disconnect\n");
   clear_espconn((struct espconn *)arg);
 }
 

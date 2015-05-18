@@ -152,7 +152,7 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
 
   // connection
   fota_cdn->conn = (struct espconn *)os_zalloc(sizeof(struct espconn));
-  fota_cdn->conn->reverse = fota_cdn;
+  fota_cdn->conn->reverse = (void*)fota_cdn;
   fota_cdn->conn->type = ESPCONN_TCP;
   fota_cdn->conn->state = ESPCONN_NONE;
   // new tcp connection
@@ -162,7 +162,7 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
 
   // if ip address is provided, go ahead
   if (UTILS_StrToIP(fota_cdn->host, &fota_cdn->conn->proto.tcp->remote_ip)) {
-    INFO("CDN client: Connect to ip %s:%d\r\n", fota_cdn->host, fota_cdn->port);
+    INFO("CDN client: Connect to %s:%d\r\n", fota_cdn->host, fota_cdn->port);
     // check for new version
     start_esp_connect(fota_cdn->conn, fota_cdn->secure, upgrade_connect_cb, upgrade_discon_cb);
   }

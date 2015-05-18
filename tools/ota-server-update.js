@@ -41,8 +41,8 @@ http.createServer(function(request, response) {
     }
 
     // testing
-    // response.writeHead(404)
-    // return response.end();
+    response.writeHead(404)
+    return response.end();
     // end testing
 
     console.log(filename)

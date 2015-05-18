@@ -43,7 +43,7 @@ fota_ticktock(fota_client_t *fota_client)
 {
   // connection
   fota_client->conn = (struct espconn *)os_zalloc(sizeof(struct espconn));
-  fota_client->conn->reverse = fota_client;
+  fota_client->conn->reverse = (void*)fota_client;
   fota_client->conn->type = ESPCONN_TCP;
   fota_client->conn->state = ESPCONN_NONE;
 
