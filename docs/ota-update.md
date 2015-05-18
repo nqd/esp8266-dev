@@ -1,19 +1,14 @@
 # this document describes the method of ota firmware updating
 
-API, the restful way
-
-### ESP host side
-
-When bootup, host report its version.
-
-OTA client gets latest informations of firmware of an application via REST calling:
+When bootup, OTA client polls for latest informations of firmware of an application via REST calling:
 
     GET /firmware/:application/versions
     HEADERS:
         uuid: uuid
         token: token
-        host: esp
+        host: esp8266
         version: current version
+        user: user1/user2
 
 OTA server should return information of last version, which contain metadata of the latest, including URL to get user1/user2.bin.
 
@@ -28,56 +23,40 @@ OTA server should return information of last version, which contain metadata of 
                 url: /firmware/:application/versions/0.1.100
             }
     }
-<!--    histories: [
-            {
-                version:
-                created:
-                host: cdn-host
-                url:
-            },
-        ]
--->    
 
-Note: should return the last version only, to save ESP resources.
+Note: ESP host will refuse the response if it doesnot contain tuble {version, protocol, host, url}.
 
 Get the raw image of an application at specific version
 
-    Connect CDN-Host HTTP/1.1
-    GET /firmware/:application/versions/0.1.100/user1.bin(user2.bin)
+    Connect cdn-host
+    GET /url HTTP/1.1
+
+One when create new version of an application, need to register to fota server. The registration infomation provides dirrect url for the user1.bin and user2.bin, e.g. from Dropbox or Amazon.
+
+    POST /firmware/:application
     HEADERS:
-        UUID: uuid
         token: token
-        host: esp               // FIXED value
-        version: current version
-
-### Developing site
-
-Should follow http://semver.org/ for version labeling.
-
-    MAJOR version when you make incompatible API changes,
-    MINOR version when you add functionality in a backwards-compatible manner, and
-    PATCH version when you make backwards-compatible bug fixes.
-
-Additional labels for pre-release and build metadata are available as extensions to the MAJOR.MINOR.PATCH format. 
-
-Use POST to create new version. User should push 2 images, user1.bin and user2.bin in BSON. If BODY.version existed, and server accept this suggested version, it should be the latest version. Otherwise, type will be used to generate next version.
-
-    POST /firmware/:application/versions
-    HEADERS:
-        authentication: 
-    BODY
-    {
-        version: suggested_version,         // suggested by host
-        type: major/minor/patch,
-        user1: raw_image,
-        user2: raw_image
-    } // bson format
-
-should return
 
     BODY
     {
+        application: application,
         version: new version,
-        timestamp: unix timestamp
-        url: /firmware/:application/versions/0.1.100
+        host: esp8266
+        firmwares: [{
+            name: user1.bin,
+            url: "https://dl.dropboxusercontent.com/s/jwnjhet4tngh3nh/user1.bin?dl=0"
+        },
+        {
+            name: user2.bin,
+            url: "https://dl.dropboxusercontent.com/s/o996zg2vmyx3396/user2.bin?dl=0"
+        }]
     }
+
+Note: the url provided should be the dirrect link to download userx.bin, since esp http client is simple, cannot handle redirect HTTP links. Use ```curl -I url``` to check for return which should contain Content-Length:
+```
+HTTP/1.1 200 OK
+accept-ranges: bytes
+cache-control: max-age=0
+Content-Length: 387808
+```
+
