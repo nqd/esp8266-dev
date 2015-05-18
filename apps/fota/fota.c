@@ -34,7 +34,7 @@ fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 
   struct espconn *pespconn = (struct espconn *)arg;
   // check for new version
-  start_esp_connect(pespconn, FOTA_SECURE);
+  start_esp_connect(pespconn, FOTA_SECURE, get_version_connect_cb, get_version_disconnect_cb);
 }
 
 // is called periodically to check for next version
@@ -47,10 +47,6 @@ fota_ticktock(fota_client_t *fota_client)
   fota_client->conn->type = ESPCONN_TCP;
   fota_client->conn->state = ESPCONN_NONE;
 
-  espconn_regist_connectcb(fota_client->conn, get_version_connect_cb);
-  // espconn_regist_reconcb(fota_client->conn, get_version_disconnect_cb);
-  espconn_regist_disconcb(fota_client->conn, get_version_disconnect_cb);
-
   // new tcp connection
   fota_client->conn->proto.tcp = (esp_tcp *)os_zalloc(sizeof(esp_tcp));
   fota_client->conn->proto.tcp->local_port = espconn_port();
@@ -60,7 +56,7 @@ fota_ticktock(fota_client_t *fota_client)
   if (UTILS_StrToIP(fota_client->host, &fota_client->conn->proto.tcp->remote_ip)) {
     INFO("FOTA client: Connect to ip %s:%d\r\n", fota_client->host, fota_client->port);
     // check for new version
-    start_esp_connect(fota_client->conn, FOTA_SECURE);
+    start_esp_connect(fota_client->conn, FOTA_SECURE, get_version_connect_cb, get_version_disconnect_cb);
   }
   // else, use dns query to get ip address
   else {

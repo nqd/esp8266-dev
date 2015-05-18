@@ -140,12 +140,18 @@ convert_version(const char *version_str, uint32_t len, uint32_t *version_bin)
 }
 
 void ICACHE_FLASH_ATTR
-start_esp_connect(struct espconn *conn, uint8_t secure)
+start_esp_connect(struct espconn *conn, uint8_t secure, void *connect_cb, void *disconnect_cb)
 {
-if (secure)
-  espconn_secure_connect(conn);
-else
-  espconn_connect(conn);
+  espconn_regist_connectcb(conn, connect_cb);
+  espconn_regist_disconcb(conn, disconnect_cb);
+  if (secure) {
+    if (espconn_secure_connect(conn) !=0 )
+      INFO("Secure connect fail\n");
+  }
+  else {
+    if (espconn_connect(conn) != 0)
+      INFO("Connect fail\n");
+  }
 }
 
 void ICACHE_FLASH_ATTR

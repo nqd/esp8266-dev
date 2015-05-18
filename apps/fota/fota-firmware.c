@@ -43,8 +43,9 @@ upgrade_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 
   struct espconn *pespconn = (struct espconn *)arg;
   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
+
   // check for new version
-  start_esp_connect(pespconn, fota_cdn->secure);
+  start_esp_connect(fota_cdn->conn, fota_cdn->secure, upgrade_connect_cb, upgrade_discon_cb);
 }
 
 LOCAL void ICACHE_FLASH_ATTR
@@ -149,23 +150,21 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
   fota_cdn->url = (char*)os_zalloc(os_strlen(url)+1);
   os_strncpy(fota_cdn->url, url, os_strlen(url));
 
+  // connection
   fota_cdn->conn = (struct espconn *)os_zalloc(sizeof(struct espconn));
   fota_cdn->conn->reverse = fota_cdn;
   fota_cdn->conn->type = ESPCONN_TCP;
   fota_cdn->conn->state = ESPCONN_NONE;
+  // new tcp connection
   fota_cdn->conn->proto.tcp = (esp_tcp *)os_zalloc(sizeof(esp_tcp));
   fota_cdn->conn->proto.tcp->local_port = espconn_port();
   fota_cdn->conn->proto.tcp->remote_port = fota_cdn->port;
-
-  espconn_regist_connectcb(fota_cdn->conn, upgrade_connect_cb);
-  // espconn_regist_reconcb(fota_client->conn, upgrade_discon_cb);
-  espconn_regist_disconcb(fota_cdn->conn, upgrade_discon_cb);
 
   // if ip address is provided, go ahead
   if (UTILS_StrToIP(fota_cdn->host, &fota_cdn->conn->proto.tcp->remote_ip)) {
     INFO("CDN client: Connect to ip %s:%d\r\n", fota_cdn->host, fota_cdn->port);
     // check for new version
-    start_esp_connect(fota_cdn->conn, fota_cdn->secure);
+    start_esp_connect(fota_cdn->conn, fota_cdn->secure, upgrade_connect_cb, upgrade_discon_cb);
   }
   // else, use dns query to get ip address
   else {

@@ -44,13 +44,13 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
        *n_protocol;
 
   if (parse_fota(body, bodylen, &n_version, &n_host, &n_url, &n_protocol) < 0) {
-    INFO("Invalid response\n");
+    INFO("FOTA Client: Invalid response\n");
     goto CLEAN_MEM;
   }
-  INFO("Version %s\n", n_version);
-  INFO("Host %s\n", n_host);
-  INFO("URL %s\n", n_url);
-  INFO("Protocol %s\n", n_protocol);
+  INFO("\tVersion %s\n", n_version);
+  INFO("\tHost %s\n", n_host);
+  INFO("\tURL %s\n", n_url);
+  INFO("\tProtocol %s\n", n_protocol);
 
   /* then, we have valide JSON response */  
   // disable data receiving timeout handing
@@ -60,27 +60,29 @@ get_version_recv(void *arg, char *pusrdata, unsigned short len)
 
   uint32_t version;
   if (convert_version(n_version, os_strlen(n_version), &version) < 0) {
-    REPORT("Invalide version return %s\n", n_version);
+    REPORT("FOTA Client: Invalide version return %s\n", n_version);
     goto CLEAN_MEM;
   }
 
   /* if we still have lastest version */
   if (version <= version_fwr) {
-    INFO("We have lastest firmware (current %u.%u.%u vs online %u.%u.%u)\n", 
+    INFO("FOTA Client: We have lastest firmware (current %u.%u.%u vs online %u.%u.%u)\n", 
       (version_fwr/256/256)%256, (version_fwr/256)%256, version_fwr%256,
       (version/256/256)%256, (version/256)%256, version%256);
     goto CLEAN_MEM;
   }
 
-  INFO("Prepare to get firmware\n");
+  INFO("FOTA Client: Preparing to get firmware\n");
 
   start_cdn(&fota_client->fw_server, n_version, n_host, n_url, n_protocol);
 
 CLEAN_MEM:
+  INFO("clean mem\n");
   FREE(n_host);
   FREE(n_url);
   FREE(n_version);
   FREE(n_protocol);
+  INFO("end clean mem\n");
 }
 
 /**
@@ -96,7 +98,7 @@ get_version_timeout(void *arg)
   fota_client_t *fota_client = (fota_client_t *)pespconn->reverse;
   os_timer_disarm(&fota_client->request_timeout);
 
-  INFO("get version timeout, close connection\n");
+  INFO("FOTA Client: Request timeout, close connection\n");
   clear_espconn(pespconn);
 }
 
@@ -115,7 +117,7 @@ get_version_sent_cb(void *arg)
   os_timer_disarm(&fota_client->request_timeout);
   os_timer_setfn(&fota_client->request_timeout, (os_timer_func_t *)get_version_timeout, pespconn);
   os_timer_arm(&fota_client->request_timeout, 5000, 0);
-  INFO("FOTA Client: sent request\n");
+  INFO("FOTA Client: Sent request\n");
 }
 
 /**
