@@ -1,0 +1,6 @@
+[submodule "esp-sdk"]
+	path = esp-sdk
+	url = https://github.com/nqd/esp8266-sdk.git
+[submodule "tools/esptool"]
+	path = tools/esptool
+	url = https://github.com/themadinventor/esptool.git

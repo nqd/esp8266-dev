@@ -1,22 +1,20 @@
 BUILD_BASE = .objs
 FW_BASE    = .firmwares
 
-# Base ESPRESSIF directory, contains SDK, esptool
-ESPRESSIF_ROOT ?= ${HOME}/esp-open-sdk
+# base directory for the compiler
+COMPILE_ROOT ?= ${HOME}/esp-open-sdk/xtensa-lx106-elf/bin
 
-# Base directory for the compiler
-COMPILE_ROOT ?= ${ESPRESSIF_ROOT}/xtensa-lx106-elf/bin
-# Base directory of the ESP8266 SDK package, absolute
-SDK_BASE  ?= ${ESPRESSIF_ROOT}/esp_iot_sdk_v1.0.1_b1
-# Esptool.py path and port
-ESPTOOL   ?= ${ESPRESSIF_ROOT}/esptool/esptool.py
+# base directory of the ESP8266 SDK package, absolute
+SDK_BASE   = ${ROOT}/esp-sdk
+# ssptool.py path and port
 ESPPORT   ?= /dev/ttyUSB0
-
-GEN_APPBIN = $(SDK_BASE)/tools/gen_appbin.py
+ESPTOOL    = $(ROOT)/tools/esptool/esptool.py
+# script to gen bin
+GEN_APPBIN = $(ROOT)/tools/gen_appbin.py
 
 # name for the target project
 TARGET    ?= app
-# name fot the prject
+# name for the prject
 PROJECT   ?= ESPPROJECT
 # which modules (subdirectories) of the project to include in compiling
 MODULES   += user
@@ -173,7 +171,7 @@ flash:
 ifeq ($(OTA), 0)
 	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(BIN_NAME_1) 0x40000 $(BIN_NAME_2)
 else
-	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(ROOT)/tools/bin/boot_v1.3b3.bin 0x01000 $(BIN_NAME_OTA) 0x7e000 $(ROOT)/tools/bin/blank.bin
+	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(ROOT)/tools/bin/boot_v1.3b3.bin 0x01000 $(BIN_NAME_OTA) 0x7C000 $(ROOT)/tools/bin/esp_init_data_default.bin 0x7e000 $(ROOT)/tools/bin/blank.bin
 endif
 	${ROOT}/tools/serialdump-linux -b115200 ${ESPPORT}
 
