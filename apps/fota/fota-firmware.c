@@ -125,6 +125,16 @@ upgrade_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
   struct espconn *pespconn = (struct espconn *)arg;
   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
 
+  // INFO("DNS dest ip: %d.%d.%d.%d:%d\n",
+  //   pespconn->proto.tcp->remote_ip[0],
+  //   pespconn->proto.tcp->remote_ip[1],
+  //   pespconn->proto.tcp->remote_ip[2],
+  //   pespconn->proto.tcp->remote_ip[3],
+  //   pespconn->proto.tcp->remote_port);
+
+  if(ipaddr->addr != 0) {
+    os_memcpy(pespconn->proto.tcp->remote_ip, &ipaddr->addr, 4);
+  }
   // check for new version
   start_esp_connect(fota_cdn->conn, fota_cdn->secure, upgrade_connect_cb, upgrade_discon_cb);
 }
@@ -168,7 +178,7 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
     INFO("Firmware client: Connect to domain %s:%d\r\n", fota_cdn->host, fota_cdn->port);
     espconn_gethostbyname(fota_cdn->conn,
       fota_cdn->host,
-      (ip_addr_t *) &fota_cdn->conn->proto.tcp->remote_ip,
+      (ip_addr_t *)(fota_cdn->conn->proto.tcp->remote_ip),
       upgrade_dns_found);
   }
 }

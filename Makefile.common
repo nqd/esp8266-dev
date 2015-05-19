@@ -7,7 +7,7 @@ ESPRESSIF_ROOT ?= ${HOME}/esp-open-sdk
 # Base directory for the compiler
 COMPILE_ROOT ?= ${ESPRESSIF_ROOT}/xtensa-lx106-elf/bin
 # Base directory of the ESP8266 SDK package, absolute
-SDK_BASE  ?= ${ESPRESSIF_ROOT}/esp_iot_sdk_v1.0.0
+SDK_BASE  ?= ${ESPRESSIF_ROOT}/esp_iot_sdk_v1.0.1_b1
 # Esptool.py path and port
 ESPTOOL   ?= ${ESPRESSIF_ROOT}/esptool/esptool.py
 ESPPORT   ?= /dev/ttyUSB0

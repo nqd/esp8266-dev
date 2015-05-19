@@ -144,8 +144,14 @@ start_esp_connect(struct espconn *conn, uint8_t secure, void *connect_cb, void *
 {
   espconn_regist_connectcb(conn, connect_cb);
   espconn_regist_disconcb(conn, disconnect_cb);
+  // INFO("Dest ip: %d.%d.%d.%d:%d\n",
+  //   conn->proto.tcp->remote_ip[0],
+  //   conn->proto.tcp->remote_ip[1],
+  //   conn->proto.tcp->remote_ip[2],
+  //   conn->proto.tcp->remote_ip[3],
+  //   conn->proto.tcp->remote_port);
+
   if (secure) {
-    INFO("Secure connect\n");
     if (espconn_secure_connect(conn) !=0 )
       INFO("Secure connect fail\n");
   }

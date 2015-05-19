@@ -33,6 +33,11 @@ fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
       *((uint8 *) &ipaddr->addr + 3));
 
   struct espconn *pespconn = (struct espconn *)arg;
+
+  if(ipaddr->addr != 0) {
+    os_memcpy(pespconn->proto.tcp->remote_ip, &ipaddr->addr, 4);
+  }
+
   // check for new version
   start_esp_connect(pespconn, FOTA_SECURE, get_version_connect_cb, get_version_disconnect_cb);
 }
@@ -63,7 +68,7 @@ fota_ticktock(fota_client_t *fota_client)
     INFO("FOTA client: Connect to domain %s:%d\r\n", fota_client->host, fota_client->port);
     espconn_gethostbyname(fota_client->conn,
       fota_client->host,
-      (ip_addr_t *) &fota_client->conn->proto.tcp->remote_ip,
+      (ip_addr_t *)(fota_client->conn->proto.tcp->remote_ip),
       fota_dns_found);
   }
 }
