@@ -11,5 +11,7 @@
 #define OTA_CLIENT        "ESP"
 #define OTA_VERSION       VERSION
 
+#define FOTA_SECURE       0
+
 #define INTERVAL          60      // seconds
 #endif

@@ -1,2 +1,2 @@
-LIBS += ssl upgrade
+LIBS += upgrade ssl
 APPS += jsmn

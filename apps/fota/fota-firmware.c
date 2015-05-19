@@ -144,12 +144,14 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
 {
   os_memset(fota_cdn, '\0', sizeof(fota_cdn_t));
 
-  if (os_strncmp(protocol, "https", os_strlen("https")) == 0)
+  if (os_strncmp(protocol, "https", os_strlen("https")) == 0) {
     fota_cdn->secure = 1;
-  else
+    fota_cdn->port = 443;
+  }
+  else {
     fota_cdn->secure = 0;
-
-  fota_cdn->port = 80;         // default of any cdn
+    fota_cdn->port = 80;
+  }
 
   fota_cdn->host = (char*)os_zalloc(os_strlen(host)+1);
   os_strncpy(fota_cdn->host, host, os_strlen(host));
