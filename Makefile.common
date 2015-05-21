@@ -30,7 +30,7 @@ DEVS      := ${ROOT}/dev ${ROOT}/dev/driver ${ROOT}/dev/utils
 #### todo: check version, should be like 100.101.255
 ####
 ifeq ("$(wildcard ./.version)","")
-$(shell touch ./.version && echo "0.0.2" > ./.version)
+$(shell touch ./.version && echo "0.0.1" > ./.version)
 endif
 VERSION := $(shell cat ./.version)
 
