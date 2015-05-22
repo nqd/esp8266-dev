@@ -116,7 +116,7 @@ upgrade_connect_cb(void *arg)
         "GET %s HTTP/1.1\r\nHost: %s\r\n"pHeadStatic"\r\n",
         fota_cdn->url, fota_cdn->host);
 
-  if(system_upgrade_start(fota_cdn->up_server) != false) {
+  if(system_upgrade_start(fota_cdn->up_server) == false) {
     INFO("Fail to start system upgrade\n");
   }
 }

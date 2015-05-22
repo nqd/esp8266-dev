@@ -145,7 +145,7 @@ start_esp_connect(struct espconn *conn, uint8_t secure, void *connect_cb, void *
   espconn_regist_connectcb(conn, connect_cb);
   espconn_regist_disconcb(conn, disconnect_cb);
   espconn_regist_reconcb(conn, reconn_cb);
-  
+
   // INFO("Dest ip: %d.%d.%d.%d:%d\n",
   //   conn->proto.tcp->remote_ip[0],
   //   conn->proto.tcp->remote_ip[1],
@@ -156,7 +156,7 @@ start_esp_connect(struct espconn *conn, uint8_t secure, void *connect_cb, void *
   if (secure) {
     os_printf("Secure connection\n");
 
-    espconn_secure_set_size(ESPCONN_CLIENT, 8192); // set SSL buffer size, if your SSL packet larger than 2048 bytes
+    espconn_secure_set_size(ESPCONN_CLIENT, 5120); // set SSL buffer size, if your SSL packet larger than 2048 bytes
     if (espconn_secure_connect(conn) !=0 )
       INFO("Secure connect fail\n");
   }
