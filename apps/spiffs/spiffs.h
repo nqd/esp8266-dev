@@ -9,9 +9,6 @@
 
 #ifndef SPIFFS_H_
 #define SPIFFS_H_
-#if defined(__cplusplus)
-extern "C" {
-#endif
 
 #include "spiffs_config.h"
 

@@ -34,7 +34,7 @@ typedef unsigned char u8_t;
 
 // Set generic spiffs debug output call.
 #ifndef SPIFFS_DGB
-#define SPIFFS_DBG(...)
+#define SPIFFS_DBG(...)         os_printf(__VA_ARGS__)
 #endif
 // Set spiffs debug output call for garbage collecting.
 #ifndef SPIFFS_GC_DGB
@@ -46,7 +46,7 @@ typedef unsigned char u8_t;
 #endif
 // Set spiffs debug output call for system consistency checks.
 #ifndef SPIFFS_CHECK_DGB
-#define SPIFFS_CHECK_DBG(...)
+#define SPIFFS_CHECK_DBG(...)   os_printf(__VA_ARGS__)
 #endif
 
 // Enable/disable API functions to determine exact number of bytes
@@ -184,7 +184,7 @@ typedef unsigned char u8_t;
 #endif
 #if SPIFFS_TEST_VISUALISATION
 #ifndef spiffs_printf
-#define spiffs_printf(...)                printf(__VA_ARGS__)
+#define spiffs_printf(...)                os_printf(__VA_ARGS__)
 #endif
 // spiffs_printf argument for a free page
 #ifndef SPIFFS_TEST_VIS_FREE_STR

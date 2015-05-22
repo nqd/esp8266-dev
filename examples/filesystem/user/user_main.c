@@ -15,6 +15,7 @@ static u8_t spiffs_work_buf[LOG_PAGE*2];
 static u8_t spiffs_fds[FD_BUF_SIZE*2];
 static u8_t spiffs_cache_buf[CACHE_BUF_SIZE];
 
+
 static s32_t ICACHE_FLASH_ATTR
 my_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
   int res = spi_flash_read(addr, (u32_t*)&(*dst), size);
@@ -24,6 +25,7 @@ my_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
 
 static s32_t ICACHE_FLASH_ATTR
 my_spiffs_write(u32_t addr, u32_t size, u8_t *src) {
+  os_printf("spiffs write [%s] [%d] bytes\n", src, size);
   int res = spi_flash_write(addr, (u32_t*)&(*src), size);
   os_printf("write res = %d\n", res);
   return SPIFFS_OK;
