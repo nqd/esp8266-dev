@@ -138,6 +138,18 @@ get_version_disconnect_cb(void *arg)
   clear_espconn((struct espconn *)arg);
 }
 
+void ICACHE_FLASH_ATTR
+get_version_recon_cb(void *arg, sint8 err)
+{
+  //error occured , tcp connection broke. user can try to reconnect here.
+  INFO("reconnect callback, error code %d !!!\n",err);
+#if (FOTA_SECURE)
+  espconn_secure_disconnect((struct espconn *)arg);
+#else
+  espconn_disconnect((struct espconn *)arg);
+#endif
+}
+
 /**
   * @brief  Get version connection version
   * @param  arg: contain the ip link information

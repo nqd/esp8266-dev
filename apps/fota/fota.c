@@ -39,7 +39,11 @@ fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
   }
 
   // check for new version
-  start_esp_connect(pespconn, FOTA_SECURE, get_version_connect_cb, get_version_disconnect_cb);
+  start_esp_connect(pespconn,
+    FOTA_SECURE,
+    get_version_connect_cb,
+    get_version_disconnect_cb,
+    get_version_recon_cb);
 }
 
 // is called periodically to check for next version
@@ -61,7 +65,11 @@ fota_ticktock(fota_client_t *fota_client)
   if (UTILS_StrToIP(fota_client->host, &fota_client->conn->proto.tcp->remote_ip)) {
     INFO("FOTA client: Connect to ip %s:%d\r\n", fota_client->host, fota_client->port);
     // check for new version
-    start_esp_connect(fota_client->conn, FOTA_SECURE, get_version_connect_cb, get_version_disconnect_cb);
+    start_esp_connect(fota_client->conn,
+      FOTA_SECURE,
+      get_version_connect_cb,
+      get_version_disconnect_cb,
+      get_version_recon_cb);
   }
   // else, use dns query to get ip address
   else {

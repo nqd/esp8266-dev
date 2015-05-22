@@ -140,10 +140,12 @@ convert_version(const char *version_str, uint32_t len, uint32_t *version_bin)
 }
 
 void ICACHE_FLASH_ATTR
-start_esp_connect(struct espconn *conn, uint8_t secure, void *connect_cb, void *disconnect_cb)
+start_esp_connect(struct espconn *conn, uint8_t secure, void *connect_cb, void *disconnect_cb, void *reconn_cb)
 {
   espconn_regist_connectcb(conn, connect_cb);
   espconn_regist_disconcb(conn, disconnect_cb);
+  espconn_regist_reconcb(conn, reconn_cb);
+  
   // INFO("Dest ip: %d.%d.%d.%d:%d\n",
   //   conn->proto.tcp->remote_ip[0],
   //   conn->proto.tcp->remote_ip[1],
