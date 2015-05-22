@@ -100,7 +100,7 @@ upgrade_connect_cb(void *arg)
   }
 
   os_sprintf(fota_cdn->up_server->url,
-        "GET /%s HTTP/1.1\r\nHost: %s\r\n"pHeadStatic"\r\n",
+        "GET %s HTTP/1.1\r\nHost: %s\r\n"pHeadStatic"\r\n",
         fota_cdn->url, fota_cdn->host);
 
   if(system_upgrade_start(fota_cdn->up_server) != false) {

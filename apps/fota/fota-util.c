@@ -152,6 +152,9 @@ start_esp_connect(struct espconn *conn, uint8_t secure, void *connect_cb, void *
   //   conn->proto.tcp->remote_port);
 
   if (secure) {
+    os_printf("Secure connection\n");
+
+    espconn_secure_set_size(ESPCONN_CLIENT, 8192); // set SSL buffer size, if your SSL packet larger than 2048 bytes
     if (espconn_secure_connect(conn) !=0 )
       INFO("Secure connect fail\n");
   }

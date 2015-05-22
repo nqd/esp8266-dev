@@ -36,7 +36,14 @@ user_init()
   // reset write pos
   UartDev.rcv_buff.pWritePos = UartDev.rcv_buff.pRcvMsgBuff ;
 
-  // os_delay_us(1000000);
+  os_delay_us(1000000);
+  os_printf("\n");
+  os_printf("compile time: %s %s\n", __DATE__, __TIME__);
+  system_print_meminfo();
+  os_printf("boot version: %d\n", system_get_boot_version());
+  os_printf("cpu frequency: %d Mhz\n", system_get_cpu_freq());
+  os_printf("flash id: %d\n", spi_flash_get_id());
+
   
   cmd_recvTaskQueue = (os_event_t *)os_malloc(sizeof(os_event_t)*CMD_RECVTASKQUEUELEN);
   system_os_task(cmd_recvTask, CMD_RECVTASKPRIO, cmd_recvTaskQueue, CMD_RECVTASKQUEUELEN);
