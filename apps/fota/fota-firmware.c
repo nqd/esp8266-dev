@@ -53,12 +53,12 @@ upgrade_recon_cb(void *arg, sint8 err)
 {
   //error occured , tcp connection broke. user can try to reconnect here.
   INFO("reconnect callback, error code %d !!!\n",err);
-  struct espconn *pespconn = (struct espconn *)arg;
-  fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
-if (fota_cdn->secure)
-  espconn_secure_disconnect(pespconn);
-else
-  espconn_disconnect(pespconn);
+//   struct espconn *pespconn = (struct espconn *)arg;
+//   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
+// if (fota_cdn->secure)
+//   espconn_secure_disconnect(pespconn);
+// else
+//   espconn_disconnect(pespconn);
 }
 
 /**

@@ -64,13 +64,13 @@ endif
 ### define linker and output bin w/out OTA update option
 ###
 ifeq ($(OTA), 0)
-	BOOT 			= 0 					### no boot need
+	BOOT 			= 0
 	BIN_NAME_1	:= $(addprefix $(FW_BASE)/,$(BIN_NAME_1).bin)
 	BIN_NAME_2	:= $(addprefix $(FW_BASE)/,$(BIN_NAME_2).bin)
 	BIN_OUT   = $(BIN_NAME_1) $(BIN_NAME_2)
 	LD_SCRIPT = eagle.app.v6.ld
 else ifeq ($(OTA), 1)
-	BOOT 			= 2 					###  support boot v1.2+
+	BOOT 			= 2
 	BIN_NAME_OTA	:= $(addprefix $(FW_BASE)/,$(BIN_NAME_OTA).bin)
 	LD_SCRIPT = eagle.app.v6.new.$(FLASH_SIZE).app$(IMAGE).ld
 	BIN_OUT   = $(BIN_NAME_OTA)
@@ -88,8 +88,8 @@ else
 endif
 endif
 
-mode    = 0							### flash mode
-freqdiv = 0							### flash clk div
+mode    = 0
+freqdiv = 0
 
 ifeq ($(FLASH_SIZE), 256)
   size = 1
@@ -187,6 +187,7 @@ $(TARGET_OUT): $(APP_AR)
 	@$(OBJCOPY) --only-section .rodata -O binary $@ eagle.app.v6.rodata.bin
 	@$(OBJCOPY) --only-section .irom0.text -O binary $@ eagle.app.v6.irom0text.bin
 	@COMPILE=gcc python $(GEN_APPBIN) $@ $(BOOT) $(mode) $(freqdiv) $(size)
+	$(vecho) "$(GEN_APPBIN) $@ $(BOOT) $(mode) $(freqdiv) $(size)"
 
 $(APP_AR): $(OBJ_FILE)
 	$(Q) $(AR) cru $@ $^

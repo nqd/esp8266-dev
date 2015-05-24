@@ -143,11 +143,11 @@ get_version_recon_cb(void *arg, sint8 err)
 {
   //error occured , tcp connection broke. user can try to reconnect here.
   INFO("reconnect callback, error code %d !!!\n",err);
-#if (FOTA_SECURE)
-  espconn_secure_disconnect((struct espconn *)arg);
-#else
-  espconn_disconnect((struct espconn *)arg);
-#endif
+// #if (FOTA_SECURE)
+//   espconn_secure_disconnect((struct espconn *)arg);
+// #else
+//   espconn_disconnect((struct espconn *)arg);
+// #endif
 }
 
 /**
