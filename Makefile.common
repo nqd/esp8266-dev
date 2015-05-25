@@ -4,8 +4,8 @@ FW_BASE    = .firmwares
 # change this, with your configuration
 COMPILE_ROOT ?= ${HOME}/esp-open-sdk/xtensa-lx106-elf/bin
 
-# say 512, 1024
-FLASH_SIZE ?= 512
+# say 512, 1024, 4096
+FLASH_SIZE ?= 4096
 
 # base directory of the ESP8266 SDK package, absolute
 SDK_BASE   = ${ROOT}/esp-sdk
@@ -13,7 +13,7 @@ SDK_BASE   = ${ROOT}/esp-sdk
 ESPPORT    ?= /dev/ttyUSB0
 ESPTOOL    = $(ROOT)/tools/esptool/esptool.py
 # script to gen bin
-GEN_APPBIN = $(ROOT)/tools/gen_appbin.py
+GEN_APPBIN = $(ROOT)/esp-sdk/gen_appbin.py
 
 # name for the target project
 TARGET    ?= app
@@ -54,10 +54,12 @@ ifeq ($(FLASH_SIZE), 512)
 	BIN_NAME_1   = 512_0x00000
 	BIN_NAME_2   = 512_0x40000
 	BIN_NAME_OTA = 512_user$(IMAGE)
-else ifeq ($(FLASH_SIZE), 1024)
-	BIN_NAME_1   = 1024_0x00000
-	BIN_NAME_2   = 1024_0x80000
-	BIN_NAME_OTA = 1024_user$(IMAGE)
+	flash 			 = 512
+else ifeq ($(FLASH_SIZE), 4096)
+	BIN_NAME_1   = 4096_0x00000
+	BIN_NAME_2   = 4096_0x40000
+	BIN_NAME_OTA = 4096_user$(IMAGE)
+	flash 			 = 2048
 endif
 
 ###
@@ -72,7 +74,11 @@ ifeq ($(OTA), 0)
 else ifeq ($(OTA), 1)
 	BOOT 			= 2
 	BIN_NAME_OTA	:= $(addprefix $(FW_BASE)/,$(BIN_NAME_OTA).bin)
-	LD_SCRIPT = eagle.app.v6.new.$(FLASH_SIZE).app$(IMAGE).ld
+	ifeq ($(FLASH_SIZE), 512)
+		LD_SCRIPT = eagle.app.v6.new.$(flash).app$(IMAGE).ld
+	else ifeq ($(FLASH_SIZE), 4096)
+		LD_SCRIPT = eagle.app.v6.new.$(flash).ld
+	endif
 	BIN_OUT   = $(BIN_NAME_OTA)
 endif
 
@@ -98,7 +104,7 @@ else ifeq ($(FLASH_SIZE), 1024)
 else ifeq ($(FLASH_SIZE), 2048)
   size = 3
 else ifeq ($(FLASH_SIZE), 4096)
-  size = 4
+  size = 6
 else
 	size = 0
 endif
@@ -204,13 +210,13 @@ ifeq ($(FLASH_SIZE), 512)
 ifeq ($(OTA), 0)
 	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(BIN_NAME_1) 0x40000 $(BIN_NAME_2) 0x7C000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0x7E000 $(ROOT)/esp-sdk/bin/blank.bin
 else ifeq ($(OTA), 1)
-	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(ROOT)/esp-sdk/bin/boot_v1.3b3.bin $(IMAGE_ADDRESS) $(BIN_NAME_OTA) 0x7C000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0x7E000 $(ROOT)/esp-sdk/bin/blank.bin
+	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(ROOT)/esp-sdk/bin/boot_v1.4\(b1\).bin $(IMAGE_ADDRESS) $(BIN_NAME_OTA) 0x7C000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0x7E000 $(ROOT)/esp-sdk/bin/blank.bin
 endif
-else ifeq ($(FLASH_SIZE), 1024)
+else ifeq ($(FLASH_SIZE), 4096)
 ifeq ($(OTA), 0)
 	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(BIN_NAME_1) 0x80000 $(BIN_NAME_2) 0xFC000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0xFE000 $(ROOT)/esp-sdk/bin/blank.bin
 else ifeq ($(OTA), 1)
-	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(ROOT)/esp-sdk/bin/boot_v1.3b3.bin $(IMAGE_ADDRESS) $(BIN_NAME_OTA) 0xFC000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0xFE000 $(ROOT)/esp-sdk/bin/blank.bin
+	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(ROOT)/esp-sdk/bin/boot_v1.4\(b1\).bin $(IMAGE_ADDRESS) $(BIN_NAME_OTA) 0x3FC000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0x3FE000 $(ROOT)/esp-sdk/bin/blank.bin
 endif
 endif
 	# ${ROOT}/tools/serialdump-linux -b115200 ${ESPPORT}

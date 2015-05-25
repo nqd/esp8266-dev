@@ -3,7 +3,7 @@
 
 #define SSID            	"FIT_LAB"
 #define SSID_PASSWORD   	"fit@dhcn"
-#define UPDATE_SERVER_IP    "192.168.1.178"
+#define UPDATE_SERVER_IP    "192.168.1.163"
 #define UPDATE_SERVER_PORT  8888
 
 #define OTA_UUID          "16699293389619"
