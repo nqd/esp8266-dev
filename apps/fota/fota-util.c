@@ -13,7 +13,6 @@
 #define FAILED    -1
 #define SUCCESS   0
 
-
 LOCAL int8_t ICACHE_FLASH_ATTR
 jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   if (tok->type == JSMN_STRING && (int) os_strlen(s) == tok->end - tok->start &&
@@ -40,7 +39,7 @@ json_get_value(const char *json, jsmntok_t *tok, const char *key, char **value) 
 }
 
 int8_t  ICACHE_FLASH_ATTR
-parse_fota(const char *json, uint32_t len, char **version, char **host, char **url, char **protocol)
+parse_fota(const char *json, uint32_t len, char **version, char **host, char **path, char **protocol)
 {
   int count = 0;
   int i;
@@ -51,7 +50,7 @@ parse_fota(const char *json, uint32_t len, char **version, char **host, char **u
   // prepare pointer
   *version = NULL;
   *host = NULL;
-  *url = NULL;
+  *path = NULL;
   *protocol = NULL;
 
   jsmn_init(&par);
@@ -81,7 +80,7 @@ parse_fota(const char *json, uint32_t len, char **version, char **host, char **u
         }
         else if (json_get_value(json, &tok[i+z+2], "host", host) == 0)
           count += 1;
-        else if (json_get_value(json, &tok[i+z+2], "url", url) == 0)
+        else if (json_get_value(json, &tok[i+z+2], "path", path) == 0)
           count += 1;
         else if (json_get_value(json, &tok[i+z+2], "protocol", protocol) == 0)
           count += 1;
@@ -94,7 +93,7 @@ parse_fota(const char *json, uint32_t len, char **version, char **host, char **u
   if (count < 4) {
     FREE(*version);
     FREE(*host);
-    FREE(*url);
+    FREE(*path);
     FREE(*protocol);
     return FAILED;
   }
@@ -155,10 +154,10 @@ start_esp_connect(struct espconn *conn, uint8_t secure, void *connect_cb, void *
 
   if (secure) {
     os_printf("Secure connection\n");
-
     espconn_secure_set_size(ESPCONN_CLIENT, 5120); // set SSL buffer size, if your SSL packet larger than 2048 bytes
-    if (espconn_secure_connect(conn) !=0 )
-      INFO("Secure connect fail\n");
+    int8_t cv = espconn_secure_connect(conn);
+    if (cv < 0)
+      INFO("Secure connect fail: %d\n", cv);
   }
   else {
     if (espconn_connect(conn) != 0)

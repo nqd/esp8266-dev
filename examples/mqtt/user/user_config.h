@@ -12,11 +12,11 @@
 #define MQTT_BUF_SIZE   1024
 #define MQTT_KEEPALIVE  120  /*second*/
 
-#define MQTT_CLIENT_ID  "11717002041464"
+#define MQTT_CLIENT_ID  ""
 #define MQTT_USER       MQTT_CLIENT_ID
-#define MQTT_PASS       "d5c6c92ee49d4faeadf269d806f2f447652536d9439c8ab3ed9ed27d881856d14e322ddd52c6559a8c0f9fed6327c3d498e4580b1594a356f7fc5c14d18c582ed59d20293c1f9bb2b02f7ba224508def"
-#define MQTT_TOPIC_DO   "11717002041464/DO/data"
-#define MQTT_TOPIC_PH   "11717002041464/PH/data"
+#define MQTT_PASS       ""
+#define MQTT_TOPIC_DO   ""
+#define MQTT_TOPIC_PH   ""
 
 #define STA_SSID "FIT_LAB"
 #define STA_PASS "fit@dhcn"

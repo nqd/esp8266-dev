@@ -21,10 +21,6 @@ static fota_client_t fota_client;
 
 #define MIN(a,b) ((a)>(b)?(b):(a))
 
-void user_rf_pre_init(void)
-{
-}
-
 LOCAL void ICACHE_FLASH_ATTR
 connect_status_check(void *arg)
 {

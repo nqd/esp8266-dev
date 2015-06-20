@@ -26,10 +26,6 @@ cmd_recvTask(os_event_t *events)
   }
 }
 
-void user_rf_pre_init(void)
-{
-}
-
 //Init function 
 void ICACHE_FLASH_ATTR
 user_init()

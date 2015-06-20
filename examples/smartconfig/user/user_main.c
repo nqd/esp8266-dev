@@ -10,46 +10,48 @@
 *******************************************************************************/
 #include "ets_sys.h"
 #include "osapi.h"
-#include "driver/uart.h"
+
 #include "user_interface.h"
 #include "smartconfig.h"
-
-#define LOG   1
-#define PRINTF  os_printf
+#include "driver/uart.h"
 
 void ICACHE_FLASH_ATTR
-smartconfig_done(void *data)
+smartconfig_done(sc_status status, void *pdata)
 {
-  struct station_config *sta_conf = data;
+  switch(status) {
+    case SC_STATUS_WAIT:
+    os_printf("SC_STATUS_WAIT\n");
+    break;
 
-  PRINTF("ssid: %s\n", sta_conf->ssid);
-  PRINTF("pass: %s\n", sta_conf->password);
-  PRINTF("bssid set: %d\n", sta_conf->bssid_set);
-  if (sta_conf->bssid_set) {
-    PRINTF("bssid: %x:%x:%x:%x:%x:%x\n",
-      sta_conf->bssid[0] & 0xff,
-      sta_conf->bssid[1] & 0xff,
-      sta_conf->bssid[2] & 0xff,
-      sta_conf->bssid[3] & 0xff,
-      sta_conf->bssid[4] & 0xff,
-      sta_conf->bssid[5] & 0xff
-      );
+    case SC_STATUS_FIND_CHANNEL:
+    os_printf("SC_STATUS_FIND_CHANNEL\n");
+    break;
+
+    case SC_STATUS_GETTING_SSID_PSWD:
+    os_printf("SC_STATUS_GETTING_SSID_PSWD\n");
+    break;
+
+    case SC_STATUS_LINK:
+    os_printf("SC_STATUS_LINK\n");
+    struct station_config *sta_conf = pdata;
+    wifi_station_set_config(sta_conf);
+    wifi_station_disconnect();
+    wifi_station_connect();
+    break;
+    
+    case SC_STATUS_LINK_OVER:
+    os_printf("SC_STATUS_LINK_OVER\n");
+    smartconfig_stop();
+    break;
   }
-
-  wifi_station_disconnect();
-  wifi_station_set_config(sta_conf);
-  wifi_station_connect();
 }
 
-//Init function 
-void ICACHE_FLASH_ATTR
-user_init(void)
+void user_init(void)
 {
-  // Initialize the GPIO subsystem.
-  gpio_init();
   uart_init(BIT_RATE_115200, BIT_RATE_115200);
-  os_delay_us(1000000);
 
   os_printf("SDK version:%s\n", system_get_sdk_version());
-  smartconfig_start(SC_TYPE_ESPTOUCH, smartconfig_done, LOG);
+
+  wifi_set_opmode(STATION_MODE);
+  smartconfig_start(SC_TYPE_ESPTOUCH, smartconfig_done);
 }

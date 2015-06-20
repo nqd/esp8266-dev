@@ -10,12 +10,12 @@
 // total emulated spi flash size
 #define PHYS_FLASH_SIZE       (512*1024)
 // spiffs file system size
-#define SPIFFS_FLASH_SIZE     (16*1024)
+#define SPIFFS_FLASH_SIZE     (72*1024)
 // spiffs file system offset in emulated spi flash
-#define SPIFFS_PHYS_ADDR      (300*1024)
+// #define SPIFFS_PHYS_ADDR      (2048*1024)
 
 // test using filesystem magic
-// #define SPIFFS_USE_MAGIC    1
+#define SPIFFS_USE_MAGIC    0
 
 #define SECTOR_SIZE         (4*1024) 
 #define LOG_BLOCK           (SECTOR_SIZE*2)

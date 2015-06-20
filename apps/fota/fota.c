@@ -21,8 +21,11 @@ uint32_t version_fwr;
 LOCAL void ICACHE_FLASH_ATTR
 fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 {
+  struct espconn *pespconn = (struct espconn *)arg;
+
   if(ipaddr == NULL) {
     INFO("DNS: Found, but got no ip\n");
+    ((fota_client_t*)pespconn->reverse)->status = FOTA_IDLE;
     return;
   }
 
@@ -32,7 +35,6 @@ fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
       *((uint8 *) &ipaddr->addr + 2),
       *((uint8 *) &ipaddr->addr + 3));
 
-  struct espconn *pespconn = (struct espconn *)arg;
 
   if(ipaddr->addr != 0) {
     os_memcpy(pespconn->proto.tcp->remote_ip, &ipaddr->addr, 4);
@@ -50,6 +52,13 @@ fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 LOCAL void ICACHE_FLASH_ATTR
 fota_ticktock(fota_client_t *fota_client)
 {
+  if (fota_client->status != FOTA_IDLE) {
+    // INFO("FOTA is polling, quit\n");
+    return;
+  }
+
+  fota_client->status = FOTA_POLLING;
+
   // connection
   fota_client->conn = (struct espconn *)os_zalloc(sizeof(struct espconn));
   fota_client->conn->reverse = (void*)fota_client;
@@ -111,7 +120,13 @@ start_fota(fota_client_t *fota_client, uint16_t interval, char *host, uint16_t p
   fota_client->token = (char*)os_zalloc(os_strlen(token)+1);
   os_memcpy(fota_client->token, token, os_strlen(token));
 
+  // reverse
+  fota_client->fw_server.reverse = (void*)fota_client;
+
+  // status flag
+  fota_client->status = FOTA_IDLE;
+
   os_timer_disarm(&fota_client->periodic);
   os_timer_setfn(&fota_client->periodic, (os_timer_func_t *)fota_ticktock, fota_client);
-  os_timer_arm(&fota_client->periodic, fota_client->interval, 0);       // do not repeat
+  os_timer_arm(&fota_client->periodic, fota_client->interval, 1);       // repeat
 }

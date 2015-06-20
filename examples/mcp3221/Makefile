@@ -1,5 +1,3 @@
 ROOT = ../..
-OTA=0
-APPS += spiffs
-FLASH_SIZE = 512
+OTA=1
 include $(ROOT)/Makefile.common

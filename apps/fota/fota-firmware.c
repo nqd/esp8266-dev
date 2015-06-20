@@ -42,23 +42,31 @@ upgrade_response(void *arg)
     REPORT("Firmware upgrade fail\n");
   }
 
-if (fota_cdn->secure)
-  espconn_secure_disconnect(pespconn);
-else
-  espconn_disconnect(pespconn);
+  // uhm, conn may be clean before, with disconnec handling callback
+  if (fota_cdn->secure)
+    espconn_secure_disconnect(pespconn);
+  else
+    espconn_disconnect(pespconn);
+
+  // set status flag
+  ((fota_client_t *)(fota_cdn->reverse))->status = FOTA_IDLE;
+
+  // now we clean all connection and memory
+  clear_upgradeconn(fota_cdn->up_server);
+  clear_espconn(pespconn);
+  // clear url and host
+  FREE(fota_cdn->host);
+  FREE(fota_cdn->url);
 }
 
 LOCAL void ICACHE_FLASH_ATTR
 upgrade_recon_cb(void *arg, sint8 err)
 {
-  //error occured , tcp connection broke. user can try to reconnect here.
-  INFO("reconnect callback, error code %d !!!\n",err);
-//   struct espconn *pespconn = (struct espconn *)arg;
-//   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
-// if (fota_cdn->secure)
-//   espconn_secure_disconnect(pespconn);
-// else
-//   espconn_disconnect(pespconn);
+  // error occured , tcp connection broke. user can try to reconnect here.
+  INFO("Firmware upgrade reconnect callback, error code %d\n", err);
+  // no we do not clean up connection here, since upgrade_response will be
+  // called after timeout anyway.
+  // if we clean connections here, bug is guarantee.
 }
 
 /**
@@ -70,16 +78,18 @@ LOCAL void ICACHE_FLASH_ATTR
 upgrade_discon_cb(void *arg)
 {
   INFO("Firmware client: Disconnect\n");
-
+  // no we do not clean up connection here when up_server is called
+  // since upgrade_response will be called after timeout anyway.
+  // if we clean connections here, bug is guarantee.
   struct espconn *pespconn = (struct espconn *)arg;
   fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
-  // clear upgrade connection
-  clear_upgradeconn(fota_cdn->up_server);
-  // we can close it now, start from client
-  clear_espconn(pespconn);
-  // clear url and host
-  FREE(fota_cdn->host);
-  FREE(fota_cdn->url);
+  if (fota_cdn->up_server == NULL) {
+    // set status flag
+    ((fota_client_t *)(fota_cdn->reverse))->status = FOTA_IDLE;
+    clear_espconn(pespconn);
+    FREE(fota_cdn->host);
+    FREE(fota_cdn->url);
+  }
 }
 
 /**
@@ -124,8 +134,13 @@ upgrade_connect_cb(void *arg)
 LOCAL void ICACHE_FLASH_ATTR
 upgrade_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 {
+  struct espconn *pespconn = (struct espconn *)arg;
+  fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
+
   if(ipaddr == NULL) {
     INFO("DNS: Found, but got no ip\n");
+
+    ((fota_client_t *)fota_cdn->reverse)->status = FOTA_IDLE;
     return;
   }
 
@@ -134,9 +149,6 @@ upgrade_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
       *((uint8 *) &ipaddr->addr + 1),
       *((uint8 *) &ipaddr->addr + 2),
       *((uint8 *) &ipaddr->addr + 3));
-
-  struct espconn *pespconn = (struct espconn *)arg;
-  fota_cdn_t *fota_cdn = (fota_cdn_t *)pespconn->reverse;
 
   // INFO("DNS dest ip: %d.%d.%d.%d:%d\n",
   //   pespconn->proto.tcp->remote_ip[0],
@@ -159,7 +171,8 @@ upgrade_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 void ICACHE_FLASH_ATTR
 start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *protocol)
 {
-  os_memset(fota_cdn, '\0', sizeof(fota_cdn_t));
+
+  // os_memset(fota_cdn, '\0', sizeof(fota_cdn_t));
 
   if (os_strncmp(protocol, "https", os_strlen("https")) == 0) {
     fota_cdn->secure = 1;
@@ -204,4 +217,5 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
       (ip_addr_t *)(fota_cdn->conn->proto.tcp->remote_ip),
       upgrade_dns_found);
   }
+
 }
