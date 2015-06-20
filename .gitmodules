@@ -4,3 +4,6 @@
 [submodule "tools/esptool"]
 	path = tools/esptool
 	url = https://github.com/themadinventor/esptool.git
+[submodule "tools/fotaclient"]
+	path = tools/fotaclient
+	url = https://github.com/nqd/fota-client-js.git
