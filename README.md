@@ -28,12 +28,19 @@ I update tools/gen_appbin.py to avoid compiling error. Off-course I can change $
 >         cmd = '~/esp-open-sdk/xtensa-lx106-elf/bin/xtensa-lx106-elf-nm -g ' + elf_file + ' > eagle.app.sym'
 ```
 
+## OTA server
+A simple enough to use OTA server could be found at https://github.com/ubisen/ota-update/, wrote in nodejs with mongodb to store images. It's recommended to setup a server locally, but the code is good enough to run in public domain.
+Normally, a proxy like nginx is recommended to run nodejs server.
+
+OTA-client, which upload images (1, 2 for ESP) and register new version, is found at tools/fotaclient. Need more update to use with make (pull request is more than welcome, since I am quite low in bandwidth now).
+
 ## To use
 
 ```
 make OTA=1/0                # default OTA=1
 make OTA=1 IMAGE=1/2        # generate image user1/user2
 make OTA=1 IMAGE=1/2 flash  # program with OTA enable
+make FLASH_SIZE = 512/4096  # choose flash size
 ```
 
 ## How to write makefile for program:
