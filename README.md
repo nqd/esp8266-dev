@@ -5,15 +5,13 @@ Short: I do not like the developing environment provided by Espressif. Then I re
 - quick setup, e.g. make, make flash, make login, make OTA=1 fash.
 - make firmware over-the-air update easy, e.g. make RELEASE=MINOR/MINOR/PATCH. This is the on going process.
 
-All examples have been testing with 512KB module, SDK 1.0.0.
+All examples have been testing with 512KB Module-01 and 4MB Module-12.
 
 ## Setup env
 
-Use with SDK v1.0.0, setup with esp-open-sdk. With location of esp-open-sdk, change ESPRESSIF_ROOT in Makefile.common to point to this SDK. We will use lib, include, ld codes/scripts from SDK, ah, together with compiling tools off-course.
+Use with SDK v1.1.2, setup with esp-open-sdk. With location of esp-open-sdk, change ESPRESSIF_ROOT in Makefile.common to point to this SDK. We will use lib, include, ld codes/scripts from SDK, ah, together with compiling tools off-course.
 
-I have testing only with 512KB module. >1MB flash will be tested and update later.
-
-To use OTA update firmware with 512KB, change linker file ld/eagle.app.v6.new.512.app1/2.ld, section irom0_0_seg to have more spaces.
+To use OTA update firmware with 512KB, change linker file ld/eagle.app.v6.new.512.app1/2.ld, section irom0_0_seg to have more spaces. Please note that Module with 512KB is very small for current SDK, recommend to use bigger flash.
 
 ```
 <  irom0_0_seg :                         org = 0x40241010, len = 0x2B000
@@ -34,6 +32,9 @@ Normally, a proxy like nginx is recommended to run nodejs server.
 
 OTA-client, which upload images (1, 2 for ESP) and register new version, is found at tools/fotaclient. Need more update to use with make (pull request is more than welcome, since I am quite low in bandwidth now).
 
+## OTA client
+Found at /tools/fotaclient. APIKEY should be provided by go to OTA server >> Profile, copy "apiKey" from return JSON.
+
 ## To use
 
 ```
@@ -41,6 +42,7 @@ make OTA=1/0                # default OTA=1
 make OTA=1 IMAGE=1/2        # generate image user1/user2
 make OTA=1 IMAGE=1/2 flash  # program with OTA enable
 make FLASH_SIZE = 512/4096  # choose flash size
+make register               # upload, register new version. Must setup OTA server first
 ```
 
 ## How to write makefile for program:
@@ -50,7 +52,7 @@ Declare ROOT, this is the root of the project, from which could access apps and 
 Example of Makefile for program under ```/examples```:
 ```
 ROOT = ../..
-APPS += mqtt
+APPS += fota
 include ${ROOT}/Makefile.common
 ```
 
@@ -62,5 +64,5 @@ Please (me), check for frequence update
 + flash file system https://github.com/pellepl/spiffs
 
 ## Todo
-+ more complete ota update program, API of ota-update is at docs/ota-update.md
++ makefile with all options of flash
 + flash file system testing
