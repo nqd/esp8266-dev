@@ -27,13 +27,14 @@ mdns_init()
     return;
   }
 
-  info->host_name = "ubisen";
+  info->host_name = "espmodule";
   info->ipAddr = ipConfig.ip.addr; //ESP8266 station IP
   info->server_name = "module01";
-  info->server_port = 80;
+  info->server_port = 8080;
   info->txt_data[0] = "version = now";
   info->txt_data[1] = "user1 = data1";
   info->txt_data[2] = "user2 = data2";
+  // info->txt_data[3] = "vendor = me";
   espconn_mdns_init(info);
   // espconn_mdns_server_register();
   espconn_mdns_enable();
