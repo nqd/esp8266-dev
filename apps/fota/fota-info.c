@@ -13,6 +13,14 @@
 #include "fota-firmware.h"
 #include "fota-util.h"
 
+#ifndef INFO
+#define INFO os_printf
+#endif
+
+#ifndef REPORT
+#define REPORT os_printf
+#endif
+
 extern uint32_t version_fwr;
 
 char get_version_body[200];

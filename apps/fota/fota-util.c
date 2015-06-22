@@ -13,6 +13,14 @@
 #define FAILED    -1
 #define SUCCESS   0
 
+#ifndef INFO
+#define INFO os_printf
+#endif
+
+#ifndef REPORT
+#define REPORT os_printf
+#endif
+
 LOCAL int8_t ICACHE_FLASH_ATTR
 jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   if (tok->type == JSMN_STRING && (int) os_strlen(s) == tok->end - tok->start &&

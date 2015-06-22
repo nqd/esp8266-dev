@@ -3,14 +3,6 @@
 
 #include "osapi.h"
 
-#ifndef INFO
-#define INFO os_printf
-#endif
-
-#ifndef REPORT
-#define REPORT os_printf
-#endif
-
 #define pHeadStatic "Connection: keep-alive\r\n\
 Cache-Control: no-cache\r\n\
 User-Agent: ESP8266\r\n\

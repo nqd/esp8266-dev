@@ -9,6 +9,14 @@
 #include "fota-firmware.h"
 #include "fota-util.h"
 
+#ifndef INFO
+#define INFO os_printf
+#endif
+
+#ifndef REPORT
+#define REPORT os_printf
+#endif
+
 LOCAL void upgrade_discon_cb(void *arg);
 LOCAL void upgrade_connect_cb(void *arg);
 

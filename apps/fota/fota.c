@@ -10,6 +10,14 @@
 #include "fota-info.h"
 #include "fota-util.h"
 
+#ifndef INFO
+#define INFO os_printf
+#endif
+
+#ifndef REPORT
+#define REPORT os_printf
+#endif
+
 unsigned char *default_certificate;
 unsigned int default_certificate_len = 0;
 unsigned char *default_private_key;

@@ -125,7 +125,7 @@ OBJDUMP := ${COMPILE_ROOT}/xtensa-lx106-elf-objdump
 ### APPS
 APP_ROOT := $(ROOT)/apps
 ifdef APPS
-  APPINCLUDES = ${foreach APP, $(APPS), ${wildcard $(APP_ROOT)/$(APP)/Makefile.$(APP)}}
+  APPINCLUDES += ${foreach APP, $(APPS), ${wildcard $(APP_ROOT)/$(APP)/Makefile.$(APP)}}
   -include $(APPINCLUDES)
   APP_DIR += $(addprefix $(APP_ROOT)/,$(APPS)) 
 endif
@@ -217,7 +217,7 @@ else ifeq ($(FLASH_SIZE), 4096)
 ifeq ($(OTA), 0)
 	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(BIN_NAME_1) 0x80000 $(BIN_NAME_2) 0xFC000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0xFE000 $(ROOT)/esp-sdk/bin/blank.bin
 else ifeq ($(OTA), 1)
-	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 $(ROOT)/esp-sdk/bin/boot_v1.4\(b1\).bin $(IMAGE_ADDRESS) $(BIN_NAME_OTA) 0x3FC000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0x3FE000 $(ROOT)/esp-sdk/bin/blank.bin
+	-$(ESPTOOL) --port $(ESPPORT) write_flash -fs 32m-c1 0x00000 $(ROOT)/esp-sdk/bin/boot_v1.4\(b1\).bin $(IMAGE_ADDRESS) $(BIN_NAME_OTA) 0x3FC000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0x3FE000 $(ROOT)/esp-sdk/bin/blank.bin
 endif
 endif
 	# ${ROOT}/tools/serialdump-linux -b115200 ${ESPPORT}
