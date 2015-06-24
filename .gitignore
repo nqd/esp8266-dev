@@ -1,5 +1,6 @@
 *.o
 *.swp
+.version
 .objs/
 .firmwares/
 firmware/
