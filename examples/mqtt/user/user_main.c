@@ -48,16 +48,11 @@ void do_report(void *args)
 
   char s_sensor[40];
   unsigned int doTemp = rand()%10;
-  os_printf("dotemp = %d\n", doTemp);
+  os_sprintf(s_sensor, "{\"currentValue\":2%d}", doTemp);
 
-  // os_memcpy(s_sensor, '\0', sizeof(s_sensor));
-  // todo: why error!
-  os_sprintf(s_sensor, "{\"currentValue\":7.%d}", doTemp);
-  os_printf("will send %s\n", s_sensor);
+  MQTT_Publish(&mqttClient, MQTT_TOPIC, s_sensor, strlen(s_sensor), 0, 0);
 
-  MQTT_Publish(&mqttClient, MQTT_TOPIC_PH, s_sensor, strlen(s_sensor), 0, 0);
-
-  os_timer_arm(&report_timer, 1000*60, 0);
+  os_timer_arm(&report_timer, 1000*10, 0);
 }
 
 void wifiConnectCb(uint8_t status)
@@ -65,16 +60,16 @@ void wifiConnectCb(uint8_t status)
   if(status == STATION_GOT_IP){
     MQTT_Connect(&mqttClient);
   } else {
-    MQTT_Disconnect(&mqttClient);
+    // MQTT_Disconnect(&mqttClient);
   }
 }
 void mqttConnectedCb(uint32_t *args)
 {
   MQTT_Client* client = (MQTT_Client*)args;
   INFO("MQTT: Connected\r\n");
-  MQTT_Subscribe(client, "ubi/0", 0);
+  // MQTT_Subscribe(client, "ubi/0", 0);
 
-  do_report((void*)NULL);
+  // do_report((void*)NULL);
 }
 
 void mqttDisconnectedCb(uint32_t *args)
@@ -115,9 +110,7 @@ void user_init(void)
   CFG_Load();
 
   MQTT_InitConnection(&mqttClient, sysCfg.mqtt_host, sysCfg.mqtt_port, sysCfg.security);
-  // MQTT_InitConnection(&mqttClient, "192.168.1.160", 1880, sysCfg.security);
   MQTT_InitClient(&mqttClient, sysCfg.device_id, sysCfg.mqtt_user, sysCfg.mqtt_pass, sysCfg.mqtt_keepalive, 1);
-  //MQTT_InitClient(&mqttClient, "client_id", "user", "pass", 120, 1);
 
   MQTT_InitLWT(&mqttClient, "/lwt", "offline", 0, 0);
   MQTT_OnConnected(&mqttClient, mqttConnectedCb);
