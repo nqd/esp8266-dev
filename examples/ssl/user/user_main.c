@@ -12,14 +12,15 @@
 #include "espconn.h"
 #include "mem.h"
 
-#define DNS_ENABLE
 
 unsigned char *default_certificate;
 unsigned int default_certificate_len = 0;
 unsigned char *default_private_key;
 unsigned int default_private_key_len = 0;
 
-#define NET_DOMAIN "iot.espressif.cn"
+#define NET_DOMAIN "192.168.1.212"
+#define NET_PORT    1883
+// #define DNS_ENABLE
 
 const char* TLSHEAD = "GET / HTTP/1.1\r\nHost: %d.%d.%d.%d\r\nConnection: keep-alive\r\n\r\n";
 
@@ -158,7 +159,7 @@ user_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
     tcp_server_ip.addr = ipaddr->addr;
     os_memcpy(pespconn->proto.tcp->remote_ip, &ipaddr->addr, 4); // remote ip of tcp server which get by dns
 
-    pespconn->proto.tcp->remote_port = 8443; // remote SSL port of tcp server
+    pespconn->proto.tcp->remote_port = NET_PORT; // remote SSL port of tcp server
 
     pespconn->proto.tcp->local_port = espconn_port(); //local port of ESP8266
 
@@ -220,18 +221,18 @@ user_dns_check_cb(void *arg)
     os_timer_setfn(&test_timer, (os_timer_func_t *)user_dns_check_cb, user_tcp_conn);
     os_timer_arm(&test_timer, 1000, 0);
 #else
-    const char esp_server_ip[4] = {192, 185, 229, 242};
+    const char esp_server_ip[4] = {192, 168, 1, 212};
 
     os_memcpy(user_tcp_conn.proto.tcp->remote_ip, esp_server_ip, 4);
 
-    user_tcp_conn.proto.tcp->remote_port = 443; // remote SSL port of tcp server
+    user_tcp_conn.proto.tcp->remote_port = NET_PORT; // remote SSL port of tcp server
 
     user_tcp_conn.proto.tcp->local_port = espconn_port(); //local port of ESP8266
 
     espconn_regist_connectcb(&user_tcp_conn, user_tcp_connect_cb); // register connect callback
     espconn_regist_reconcb(&user_tcp_conn, user_tcp_recon_cb); // register reconnect callback as error handler
 
-    espconn_secure_set_size(ESPCONN_CLIENT,5120); // set SSL buffer size, if your SSL packet larger than 2048 bytes
+    espconn_secure_set_size(ESPCONN_CLIENT, 4096); // set SSL buffer size, if your SSL packet larger than 2048 bytes
     espconn_secure_connect(&user_tcp_conn); // tcp SSL connect
 #endif
   } else {

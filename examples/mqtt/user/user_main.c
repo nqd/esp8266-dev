@@ -32,7 +32,6 @@
 #include "osapi.h"
 #include "mqtt.h"
 #include "wifi.h"
-#include "config.h"
 #include "debug.h"
 #include "gpio.h"
 #include "user_interface.h"
@@ -58,18 +57,19 @@ void do_report(void *args)
 void wifiConnectCb(uint8_t status)
 {
   if(status == STATION_GOT_IP){
+    INFO("AP connected\n");
     MQTT_Connect(&mqttClient);
   } else {
-    // MQTT_Disconnect(&mqttClient);
+    MQTT_Disconnect(&mqttClient);
   }
 }
 void mqttConnectedCb(uint32_t *args)
 {
   MQTT_Client* client = (MQTT_Client*)args;
   INFO("MQTT: Connected\r\n");
-  // MQTT_Subscribe(client, "ubi/0", 0);
+  MQTT_Subscribe(client, MQTT_TOPIC, 0);
 
-  // do_report((void*)NULL);
+  do_report((void*)NULL);
 }
 
 void mqttDisconnectedCb(uint32_t *args)
@@ -107,10 +107,8 @@ void user_init(void)
   uart_init(BIT_RATE_115200, BIT_RATE_115200);
   os_delay_us(1000000);
 
-  CFG_Load();
-
-  MQTT_InitConnection(&mqttClient, sysCfg.mqtt_host, sysCfg.mqtt_port, sysCfg.security);
-  MQTT_InitClient(&mqttClient, sysCfg.device_id, sysCfg.mqtt_user, sysCfg.mqtt_pass, sysCfg.mqtt_keepalive, 1);
+  MQTT_InitConnection(&mqttClient, MQTT_HOST, MQTT_PORT, DEFAULT_SECURITY);
+  MQTT_InitClient(&mqttClient, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS, MQTT_KEEPALIVE, 1);
 
   MQTT_InitLWT(&mqttClient, "/lwt", "offline", 0, 0);
   MQTT_OnConnected(&mqttClient, mqttConnectedCb);
@@ -118,7 +116,7 @@ void user_init(void)
   MQTT_OnPublished(&mqttClient, mqttPublishedCb);
   MQTT_OnData(&mqttClient, mqttDataCb);
 
-  WIFI_Connect(sysCfg.sta_ssid, sysCfg.sta_pwd, wifiConnectCb);
+  WIFI_Connect(STA_SSID, STA_PASS, wifiConnectCb);
 
   INFO("\r\nSystem started ...\r\n");
 }
