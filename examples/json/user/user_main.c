@@ -24,7 +24,8 @@ static int test_failed = 0;
 #define check(cond) do { if (!(cond)) fail(); } while (0)
 
 /* Test runner */
-static void test(int (*func)(void), const char *name) {
+static void ICACHE_FLASH_ATTR
+test(int (*func)(void), const char *name) {
   int r = func();
   if (r == 0) {
     test_passed++;
@@ -50,7 +51,8 @@ static void test(int (*func)(void), const char *name) {
 #define JSMN_STRICT
 #include "jsmn.c"
 
-int test_empty() {
+int ICACHE_FLASH_ATTR
+test_empty() {
   const char *js;
   int r;
   jsmn_parser p;
@@ -88,7 +90,8 @@ int test_empty() {
   return 0;
 }
 
-int test_simple() {
+int ICACHE_FLASH_ATTR
+test_simple() {
   const char *js;
   int r;
   jsmn_parser p;
@@ -120,7 +123,8 @@ int test_simple() {
   return 0;
 }
 
-int test_primitive() {
+int ICACHE_FLASH_ATTR
+test_primitive() {
 #ifndef JSMN_STRICT
   int r;
   jsmn_parser p;
@@ -169,7 +173,8 @@ int test_primitive() {
   return 0;
 }
 
-int test_string() {
+int ICACHE_FLASH_ATTR
+test_string() {
   int r;
   jsmn_parser p;
   jsmntok_t tok[10];
@@ -202,7 +207,8 @@ int test_string() {
   return 0;
 }
 
-int test_partial_string() {
+int ICACHE_FLASH_ATTR
+test_partial_string() {
   int r;
   jsmn_parser p;
   jsmntok_t tok[10];
@@ -251,7 +257,8 @@ int test_partial_string() {
   return 0;
 }
 
-int test_unquoted_keys() {
+int ICACHE_FLASH_ATTR
+test_unquoted_keys() {
 #ifndef JSMN_STRICT
   int r;
   jsmn_parser p;
@@ -273,7 +280,8 @@ int test_unquoted_keys() {
   return 0;
 }
 
-int test_partial_array() {
+int ICACHE_FLASH_ATTR
+test_partial_array() {
   int r;
   jsmn_parser p;
   jsmntok_t tok[10];
@@ -311,7 +319,8 @@ int test_partial_array() {
   return 0;
 }
 
-int test_array_nomem() {
+int ICACHE_FLASH_ATTR
+test_array_nomem() {
   int i;
   int r;
   jsmn_parser p;
@@ -338,7 +347,8 @@ int test_array_nomem() {
   return 0;
 }
 
-int test_objects_arrays() {
+int ICACHE_FLASH_ATTR
+test_objects_arrays() {
   int r;
   jsmn_parser p;
   jsmntok_t tokens[10];
@@ -367,7 +377,8 @@ int test_objects_arrays() {
   return 0;
 }
 
-int test_issue_22() {
+int ICACHE_FLASH_ATTR
+test_issue_22() {
   int r;
   jsmn_parser p;
   jsmntok_t tokens[128];
@@ -400,7 +411,8 @@ int test_issue_22() {
   return 0;
 }
 
-int test_unicode_characters() {
+int ICACHE_FLASH_ATTR
+test_unicode_characters() {
   jsmn_parser p;
   jsmntok_t tokens[10];
   const char *js;
@@ -444,7 +456,8 @@ int test_unicode_characters() {
   return 0;
 }
 
-int test_input_length() {
+int ICACHE_FLASH_ATTR
+test_input_length() {
   const char *js;
   int r;
   jsmn_parser p;
@@ -462,7 +475,8 @@ int test_input_length() {
   return 0;
 }
 
-int test_count() {
+int ICACHE_FLASH_ATTR
+test_count() {
   jsmn_parser p;
   const char *js;
 
@@ -509,7 +523,8 @@ int test_count() {
   return 0;
 }
 
-int test_keyvalue() {
+int ICACHE_FLASH_ATTR
+test_keyvalue() {
   const char *js;
   int r;
   jsmn_parser p;
@@ -574,7 +589,8 @@ int test_keyvalue() {
 #undef JSMN_STRICT
 #include "jsmn.c"
 
-int test_nonstrict() {
+int ICACHE_FLASH_ATTR
+test_nonstrict() {
   const char *js;
   int r;
   jsmn_parser p;
