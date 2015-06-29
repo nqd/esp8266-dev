@@ -79,6 +79,11 @@ mqtt_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 	{
 		os_memcpy(client->pCon->proto.tcp->remote_ip, &ipaddr->addr, 4);
 		if(client->security){
+			#ifdef MQTT_CA_CHECK
+			if (espconn_secure_ca_enable(ESPCONN_CLIENT, MQTT_CA_FLASH_SECTOR) == false) {
+				INFO("CA failed\n");
+			}
+			#endif
 	    espconn_secure_set_size(ESPCONN_CLIENT, MQTT_SSL_SIZE); // set SSL buffer size
 			espconn_secure_connect(client->pCon);
 		}
@@ -606,6 +611,11 @@ MQTT_Connect(MQTT_Client *mqttClient)
 	if(UTILS_StrToIP(mqttClient->host, &mqttClient->pCon->proto.tcp->remote_ip)) {
 		INFO("TCP: Connect to ip  %s:%d\r\n", mqttClient->host, mqttClient->port);
 		if(mqttClient->security){
+			#ifdef MQTT_CA_CHECK
+			if (espconn_secure_ca_enable(ESPCONN_CLIENT, MQTT_CA_FLASH_SECTOR) == false) {
+				INFO("CA failed\n");
+			}
+			#endif
 	    espconn_secure_set_size(ESPCONN_CLIENT, MQTT_SSL_SIZE); // set SSL buffer size
 			espconn_secure_connect(mqttClient->pCon);
 		}
