@@ -2,18 +2,18 @@ BUILD_BASE = .objs
 FW_BASE    = .firmwares
 
 # change this, with your configuration
-COMPILE_ROOT ?= ${HOME}/esp-open-sdk/xtensa-lx106-elf/bin
+COMPILE_ROOT ?= /opt/esp-open-sdk/xtensa-lx106-elf/bin
 
 # say 512, 1024, 4096
 FLASH_SIZE ?= 4096
 
 # base directory of the ESP8266 SDK package, absolute
-SDK_BASE   = ${ROOT}/esp-sdk
+SDK_BASE   = /opt/esp-open-sdk/sdk
 # ssptool.py path and port
-ESPPORT    ?= /dev/ttyUSB0
+ESPPORT    ?= /dev/tty.usbserial-A9EP1RVF
 ESPTOOL    = $(ROOT)/tools/esptool/esptool.py
 # script to gen bin
-GEN_APPBIN = $(ROOT)/esp-sdk/gen_appbin.py
+GEN_APPBIN = $(SDK_BASE)/tools/gen_appbin.py
 # script to upload firmware for OTA
 FOTA_CLIENT = $(ROOT)/tools/fotaclient/fota-client.js
 # name for the target project
@@ -42,6 +42,7 @@ LIBS += c gcc hal pp phy net80211 lwip wpa main
 CFLAGS = -Os -g -O2 -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH
 CFLAGS += -DVERSION='"$(VERSION)"'
 CFLAGS += -DPROJECT='"$(PROJECT)"'
+
 
 # linker flags used to generate the main object file
 LDFLAGS   = -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static

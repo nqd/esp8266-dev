@@ -1,0 +1,8 @@
+#ifndef _WIFI_CONFIG_H_
+#define _WIFI_CONFIG_H_
+
+#define STA_SSID "MySSID"
+#define STA_PASS "MyPass"
+#define STA_TYPE AUTH_WPA2_PSK
+
+#endif
