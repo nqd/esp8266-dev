@@ -27,6 +27,16 @@
 #define CONFIG_FLD_REQD 0x01			// Patcher field required flag
 
 
+// I2C Config
+#define I2C_MASTER_PIN
+#define I2C_MASTER_SDA_MUX PERIPHS_IO_MUX_MTDI_U
+#define I2C_MASTER_SCL_MUX PERIPHS_IO_MUX_MTMS_U
+#define I2C_MASTER_SDA_GPIO 2
+#define I2C_MASTER_SCL_GPIO 14
+#define I2C_MASTER_SDA_FUNC FUNC_GPIO12
+#define I2C_MASTER_SCL_FUNC FUNC_GPIO14
+
+
 /*DEFAULT CONFIGURATIONS*/
 
 #define MQTT_HOST       "88.163.66.219"
@@ -48,8 +58,8 @@
 //PROTOCOL_NAMEv311     /*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
 
 // FOTA params
-#define UPDATE_SERVER_IP    "88.163.66.219"
-#define UPDATE_SERVER_PORT  80
+#define UPDATE_SERVER_IP    "localhost"
+#define UPDATE_SERVER_PORT  3000
 
 #define OTA_UUID          "557d2bfc96ce74ff3e78469f"
 #define OTA_TOKEN         "cb21211edf824fdb64f7199df5aa104fdd2aa00747256221d40bb82058797592"

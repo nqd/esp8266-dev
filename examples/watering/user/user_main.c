@@ -36,6 +36,7 @@
 #include "util.h"
 #include "debug.h"
 #include "gpio.h"
+#include "time.h"
 #include "user_interface.h"
 #include "kvstore.h"
 #include "wifi_config.h"
@@ -45,25 +46,75 @@
 #include "upgrade.h"
 #include "mqtt.h"
 #include "fota.h"
+#include "schedule_vector.h"
+#include "driver/pcf8563.h"
+
 
 
 MQTT_Client mqttClient;
 
 
+// Definition for valves schedule element
+struct schedule_tag {
+  int isInit;
+  ScheduleVector *v1;
+  ScheduleVector *v2;
+  ScheduleVector *v3;
+  ScheduleVector *v4;
+};
+
+typedef struct schedule_tag schedule;
+
   
 LOCAL int buttonState[VALVE_NUMBER] = {1, 1, 1, 1};
 LOCAL int valveState[VALVE_NUMBER] = {OFF, OFF, OFF, OFF};
-LOCAL char *commandTopic, *statusTopic;
+LOCAL char *commandTopic, *statusTopic, *v1ScheduleTopic, *v2ScheduleTopic, *v3ScheduleTopic, *v4ScheduleTopic;
 LOCAL char *controlTopic = "/node/control";
 LOCAL char *infoTopic = "/node/info";
 LOCAL flash_handle_s *configHandle;
 LOCAL os_timer_t pulseTimer1, pulseTimer2, pulseTimer3, pulseTimer4, buttonTimer, clockTimer;
 LOCAL fota_client_t fota_client;
+LOCAL schedule valves_schedule;
+LOCAL struct tm timeStruct;
 
 unsigned char *default_certificate;
 unsigned int default_certificate_len = 0;
 unsigned char *default_private_key;
 unsigned int default_private_key_len = 0;
+
+
+/**
+ * Init schedule
+ */
+LOCAL void ICACHE_FLASH_ATTR initSchedule() {
+  ScheduleVector* ptr1 = util_zalloc(sizeof(ScheduleVector));
+  ScheduleVector* ptr2 = util_zalloc(sizeof(ScheduleVector));
+  ScheduleVector* ptr3 = util_zalloc(sizeof(ScheduleVector));
+  ScheduleVector* ptr4 = util_zalloc(sizeof(ScheduleVector));
+  valves_schedule.v1 = ptr1;
+  valves_schedule.v2 = ptr2;
+  valves_schedule.v3 = ptr3;
+  valves_schedule.v4 = ptr4;
+  valves_schedule.isInit = 0;
+}
+
+/**
+ * Free schedule
+ */
+LOCAL void ICACHE_FLASH_ATTR freeSchedule() {
+  schedule_vector_free(valves_schedule.v1);
+  schedule_vector_free(valves_schedule.v2);
+  schedule_vector_free(valves_schedule.v3);
+  schedule_vector_free(valves_schedule.v4);
+  os_free(valves_schedule.v1);
+  os_free(valves_schedule.v2);
+  os_free(valves_schedule.v3);
+  os_free(valves_schedule.v4);
+  valves_schedule.v1 = NULL;
+  valves_schedule.v2 = NULL;
+  valves_schedule.v3 = NULL;
+  valves_schedule.v4 = NULL;
+}
 
 
 
@@ -74,15 +125,24 @@ LOCAL void ICACHE_FLASH_ATTR publishConnInfo(MQTT_Client *client)
 {
   struct ip_info ipConfig;
   char *buf = util_zalloc(256); 
+  uint32_t freeRam = system_get_free_heap_size();
     
   // Publish who we are and where we live
   wifi_get_ip_info(STATION_IF, &ipConfig);
-  os_sprintf(buf, "{\"muster\":{\"connstate\":\"online\",\"device\":\"home/valves\",\"ip4\":\"%d.%d.%d.%d\",\"schema\":\"hwstar_relaynode\",\"ssid\":\"%s\"}}",
+  os_sprintf(buf, "{\"muster\":{\"connstate\":\"online\",\"device\":\"home/valves\",\"ip4\":\"%d.%d.%d.%d\",\"schema\":\"hwstar_relaynode\",\"ssid\":\"%s\",\"heap\":\"%d\",\"time\":\"%d:%d:%d-%d?%d/%d/%d\"}}",
       *((uint8_t *) &ipConfig.ip.addr),
       *((uint8_t *) &ipConfig.ip.addr + 1),
       *((uint8_t *) &ipConfig.ip.addr + 2),
       *((uint8_t *) &ipConfig.ip.addr + 3),
-      STA_SSID);
+      STA_SSID,
+      freeRam,
+      timeStruct.tm_sec,
+      timeStruct.tm_min,
+      timeStruct.tm_hour,
+      timeStruct.tm_wday,
+      timeStruct.tm_mday,
+      timeStruct.tm_mon,
+      timeStruct.tm_year);
 
   INFO("MQTT Node info: %s\r\n", buf);
 
@@ -96,25 +156,112 @@ LOCAL void ICACHE_FLASH_ATTR publishConnInfo(MQTT_Client *client)
 
 
 /**
+ * Return valve schedule matching valve number
+ */
+LOCAL ScheduleVector* ICACHE_FLASH_ATTR getValveScheduleFromValveNumber(int valve){
+  if (valve == 1) 
+    return valves_schedule.v1;
+  else if (valve == 2) 
+    return valves_schedule.v2;
+  else if (valve == 3) 
+    return valves_schedule.v3;
+  else if (valve == 4) 
+    return valves_schedule.v4;
+}
+
+/**
+ * Return valve topic matching valve number
+ */
+LOCAL char* ICACHE_FLASH_ATTR getValveTopicFromValveNumber(int valve){
+  if (valve == 1) 
+    return v1ScheduleTopic;
+  else if (valve == 2) 
+    return v2ScheduleTopic;
+  else if (valve == 3) 
+    return v3ScheduleTopic;
+  else if (valve == 4) 
+    return v4ScheduleTopic;
+}
+
+/**
+ * Valve schedule,
+ * publish schedule
+ */
+
+LOCAL void ICACHE_FLASH_ATTR publishValveSchedule(MQTT_Client *client, int valveNumber) {
+  #define SCHEDULE_ENTRY_LENGTH 50
+
+  ScheduleVector *schedule_vector = getValveScheduleFromValveNumber(valveNumber); 
+  char *topic = getValveTopicFromValveNumber(valveNumber);
+  char *buf = util_zalloc(SCHEDULE_ENTRY_LENGTH * schedule_vector->size + 2);
+  uint8_t i;
+  os_sprintf(buf,"[");
+
+  for (i = 0; i < schedule_vector->size; i++) {
+    valve_schedule slot = schedule_vector_get(schedule_vector, i);
+    os_sprintf(strlen(buf)+ buf, "{\"id\":\"%d\",\"duration\":\"%d\",\"d\":\"%d\",\"h\":\"%d\",\"m\":\"%d\"}", i, slot.duration, slot.when.d, slot.when.h, slot.when.m);
+    if (i < schedule_vector->size - 1) {
+      os_sprintf(strlen(buf)+ buf, ",");
+    }
+  }
+  os_sprintf(strlen(buf)+ buf, "]");
+  
+  // Publish
+  MQTT_Publish(client, topic, buf, os_strlen(buf), 0, 1);
+  
+  // Free buffer
+  util_free(buf);
+}
+
+
+/**
+ * Current time,
+ * publish time
+ */
+
+LOCAL void ICACHE_FLASH_ATTR publishTime(MQTT_Client *client) {
+  char *buf = util_zalloc(256); 
+    
+  // Publish time
+  os_sprintf(buf, "{\"time\":\"%d:%d:%d-%d?%d/%d/%d\"}",
+      timeStruct.tm_sec,
+      timeStruct.tm_min,
+      timeStruct.tm_hour,
+      timeStruct.tm_wday,
+      timeStruct.tm_mday,
+      timeStruct.tm_mon,
+      timeStruct.tm_year);
+
+  INFO("MQTT: Time: %s\r\n", buf);
+  // Publish
+  MQTT_Publish(client, statusTopic, buf, os_strlen(buf), 0, 0);
+  
+  // Free the buffer
+  util_free(buf);
+}
+
+
+
+/**
  * Handle qstring command
  */
 
 LOCAL void ICACHE_FLASH_ATTR handleQstringCommand(char *new_value, char *command)
 {
-  char *buf = util_zalloc(128);
+  // char *buf = util_zalloc(128);
   
-  if(!new_value){
-    const char *cur_value = kvstore_get_string(configHandle, command);
-    os_sprintf(buf, "{\"%s\":\"%s\"}", command, cur_value);
-    util_free(cur_value);
-    INFO("Query Result: %s\r\n", buf );
-    MQTT_Publish(&mqttClient, statusTopic, buf, os_strlen(buf), 0, 0);
-  }
-  else{
-    kvstore_put(configHandle, command, new_value);
-  }
+  // if(!new_value){
+  //   const char *cur_value = kvstore_get_string(configHandle, command);
+  //   os_sprintf(buf, "{\"%s\":\"%s\"}", command, cur_value);
+  //   util_free(cur_value);
+  //   INFO("Query Result: %s\r\n", buf );
+  //   MQTT_Publish(&mqttClient, statusTopic, buf, os_strlen(buf), 0, 0);
+  // }
+  // else{
+  //   kvstore_put(configHandle, command, new_value);
+  // }
 
-  util_free(buf);
+  // util_free(buf);
 
 }
 
@@ -131,7 +278,7 @@ LOCAL void ICACHE_FLASH_ATTR publishButtonState(uint8_t button)
   os_strcat(result, snum);
   os_strcat(result, "}");
   INFO("MQTT: New Button Pressed: %d\r\n", button);
-  MQTT_Publish(&mqttClient, statusTopic, result, os_strlen(result), 0, 0);
+  MQTT_Publish(&mqttClient, statusTopic, result, os_strlen(result), 0, 1);
   
 }
 
@@ -151,8 +298,23 @@ LOCAL void ICACHE_FLASH_ATTR updateValveState(uint8_t s, uint8_t v)
   os_strcat(result, ",\"state\":");
   os_strcat(result, state);
   INFO("MQTT: New State: %s for valve %d\r\n", state, v);
-  MQTT_Publish(&mqttClient, statusTopic, result, os_strlen(result), 0, 0);
+  MQTT_Publish(&mqttClient, statusTopic, result, os_strlen(result), 0, 1);
 
+}
+
+
+/**
+ * Return valve schedule matching topic
+ */
+LOCAL ScheduleVector* ICACHE_FLASH_ATTR getValveScheduleFromTopic(char* topic){
+  if (!os_strcmp(topic, v1ScheduleTopic)) 
+    return valves_schedule.v1;
+  else if (!os_strcmp(topic, v2ScheduleTopic)) 
+    return valves_schedule.v2;
+  else if (!os_strcmp(topic, v3ScheduleTopic)) 
+    return valves_schedule.v3;
+  else if (!os_strcmp(topic, v4ScheduleTopic)) 
+    return valves_schedule.v4;
 }
 
 /**
@@ -227,11 +389,13 @@ LOCAL void ICACHE_FLASH_ATTR valveToggle(uint8_t valve)
 LOCAL void ICACHE_FLASH_ATTR wifiConnectCb(uint8_t status) {
   if(status == STATION_GOT_IP){
     MQTT_Connect(&mqttClient);
-    // start_fota(&fota_client, INTERVAL, UPDATE_SERVER_IP, UPDATE_SERVER_PORT, OTA_UUID, OTA_TOKEN);
+    start_fota(&fota_client, INTERVAL, UPDATE_SERVER_IP, UPDATE_SERVER_PORT, OTA_UUID, OTA_TOKEN);
   } else {
     MQTT_Disconnect(&mqttClient);
   }
 }
+
+
 
 
 /**
@@ -270,6 +434,7 @@ LOCAL void ICACHE_FLASH_ATTR surveyCompleteCb(void *arg, STATUS status) {
 
 
 
+
 /**
  * MQTT Connect call back
  */
@@ -285,6 +450,12 @@ LOCAL void ICACHE_FLASH_ATTR mqttConnectedCb(uint32_t *args) {
   MQTT_Subscribe(client, controlTopic, 0);
   // Subscribe to command topic
   MQTT_Subscribe(client, commandTopic, 0);
+  // Subscribe to valves schedule topic
+  MQTT_Subscribe(client, v1ScheduleTopic, 0);
+  MQTT_Subscribe(client, v2ScheduleTopic, 0);
+  MQTT_Subscribe(client, v3ScheduleTopic, 0);
+  MQTT_Subscribe(client, v4ScheduleTopic, 0);
+
   // Publish valves state
   // uint8_t i;
   // for (i = 0; i < VALVE_NUMBER; ++i) {
@@ -335,19 +506,118 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
   
   INFO("Receive topic: %s, data: %s \r\n", topicBuf, dataBuf);
   
-  // Control Message?
-  if((!os_strcmp(topicBuf, controlTopic)) || (!os_strcmp(topicBuf, commandTopic))){
+  
+  if ((!os_strcmp(topicBuf, v1ScheduleTopic)) || (!os_strcmp(topicBuf, v2ScheduleTopic)) || (!os_strcmp(topicBuf, v3ScheduleTopic)) || (!os_strcmp(topicBuf, v4ScheduleTopic))) {   
+    ScheduleVector *schedule_vector = getValveScheduleFromTopic(topicBuf);
+    jsmn_init(&p);
+    r = jsmn_parse(&p, dataBuf, os_strlen(dataBuf), t, sizeof(t)/sizeof(t[0]));
+    if (r < 0) {
+      os_printf("Failed to parse JSON: %d\n", r);
+      util_free(topicBuf);
+      util_free(dataBuf);
+      return;
+    }
+
+    /* Assume the top-level element is an object */
+    if (r < 1 || t[0].type != JSMN_ARRAY) {
+      os_printf("Array expected\n");
+      util_free(topicBuf);
+      util_free(dataBuf);
+      return;
+    }
+
+    // Check if schedule has already been init 
+    if (valves_schedule.isInit){
+      os_printf("Schedule already init\n");
+      util_free(topicBuf);
+      util_free(dataBuf);
+      return;
+    }
+    valves_schedule.isInit = 1;
+
+    if (t[0].size <= 0) {
+      os_printf("Empty array\n");
+      util_free(topicBuf);
+      util_free(dataBuf);
+      return;
+    } else {
+      schedule_vector_init(schedule_vector, t[0].size);
+    }
+
+    for (i = 1; i < r; i++) {
+      if ((t[i].type != JSMN_OBJECT) || (t[i].size < 5)) {
+        os_printf("Wrong json syntax, expecting an object with 5 attributes\n");
+        continue;
+      } else {
+        uint8_t j;
+        int8_t id = 0;
+        int8_t day = -1;
+        int8_t hour = -1;
+        int8_t min = -1;
+        int32_t duration = -1;
+        for (j = 0; j < t[i].size * 2; j++) {
+          if (jsoneq(dataBuf, &t[i+1+j], "id") == 0) {
+            char *idC = json_get_value_as_primitive(dataBuf, &t[i+1+j+1]);
+            if (idC != NULL) {
+              id = atoi(idC);
+              os_free(idC);
+            }
+            j++;
+          } else if (jsoneq(dataBuf, &t[i+1+j], "duration") == 0) {
+            char *durC = json_get_value_as_primitive(dataBuf, &t[i+1+j+1]);
+            if (durC != NULL) {
+              duration = atoi(durC);
+              os_free(durC);
+            }
+            j++;
+          } else if (jsoneq(dataBuf, &t[i+1+j], "d") == 0) {
+            char *dayC = json_get_value_as_primitive(dataBuf, &t[i+1+j+1]);
+            if (dayC != NULL) {
+              day = atoi(dayC);
+              os_free(dayC);
+            }
+            j++;
+          } else if (jsoneq(dataBuf, &t[i+1+j], "h") == 0) {
+            char *hourC = json_get_value_as_primitive(dataBuf, &t[i+1+j+1]);
+            if (hourC != NULL) {
+              hour = atoi(hourC);
+              os_free(hourC);
+            }
+            j++;
+          } else if (jsoneq(dataBuf, &t[i+1+j], "m") == 0) {
+            char *minC = json_get_value_as_primitive(dataBuf, &t[i+1+j+1]);
+            if (minC != NULL) {
+              min = atoi(minC);
+              os_free(minC);
+            }
+            j++;
+          }
+        }
+        if ((id >= 0) && (day >= 0) && (hour >= 0) && (min >= 0) && (duration >= 0)) {
+          schedule_vector_set(schedule_vector, id, duration, day, hour, min);
+        }
+        i += t[i].size * 2;
+      }
+    }
+
+  }
+  // Control|Command Message?
+  else if ((!os_strcmp(topicBuf, controlTopic)) || (!os_strcmp(topicBuf, commandTopic))){
     
     jsmn_init(&p);
     r = jsmn_parse(&p, dataBuf, os_strlen(dataBuf), t, sizeof(t)/sizeof(t[0]));
     if (r < 0) {
       os_printf("Failed to parse JSON: %d\n", r);
+      util_free(topicBuf);
+      util_free(dataBuf);
       return;
     }
 
     /* Assume the top-level element is an object */
     if (r < 1 || t[0].type != JSMN_OBJECT) {
       os_printf("Object expected\n");
+      util_free(topicBuf);
+      util_free(dataBuf);
       return;
     }
 
@@ -357,8 +627,10 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
       if (s != NULL) {
         if (jsoneq(dataBuf, &t[i+1], "muster") == 0) {
           publishConnInfo(&mqttClient);
+        } else if (jsoneq(dataBuf, &t[i+1], "time") == 0) {
+          publishTime(&mqttClient);
         } else {
-          util_assert(FALSE, "Unsupported command: %s", s);
+          os_printf("Unsupported command: %s\n", s);
         }
         os_free(s);
       }
@@ -381,7 +653,7 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
           uint8_t j, k; 
           k = i+j+2;
           if ((t[i+1].type != JSMN_OBJECT) && (t[i+1].size < 4)) {
-            util_assert(FALSE, "Missing param", NULL);
+            os_printf("Missing param\n");
           } else if ((jsoneq(dataBuf, &t[k], "valve") == 0) && (jsoneq(dataBuf, &t[k+2], "time") == 0)) {
             char *valve = json_get_value_as_primitive(dataBuf, &t[k+1]);
             char *duration = json_get_value_as_primitive(dataBuf, &t[k+3]);
@@ -391,12 +663,161 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
               valveSet(ON, valveIdx);
               os_timer_arm(getPulseTimer(valveIdx), millis, 0);
             } else {
-              util_assert(FALSE, "Incorect param", NULL);
+              os_printf("Incorect param\n");
             }
             os_free(valve);
             os_free(duration);
           } else {
-            util_assert(FALSE, "Missing param", NULL);
+            os_printf("Missing param\n");
+          }
+        }
+      } else if (jsoneq(dataBuf, &t[i+1], "addSlot") == 0) {
+        i += 2;
+        if ((i < r) && (jsoneq(dataBuf, &t[i], "param") == 0)) {
+          uint8_t j, k; 
+          k = i+j+2;
+          if ((t[i+1].type != JSMN_OBJECT) && (t[i+1].size < 5)) {
+            os_printf("Missing param\n");
+          } else if ((jsoneq(dataBuf, &t[k], "valve") == 0) && (jsoneq(dataBuf, &t[k+2], "duration") == 0) && (jsoneq(dataBuf, &t[k+4], "d") == 0) && (jsoneq(dataBuf, &t[k+6], "h") == 0) && (jsoneq(dataBuf, &t[k+8], "m") == 0)) {
+            char *valve = json_get_value_as_primitive(dataBuf, &t[k+1]);
+            char *durationC = json_get_value_as_primitive(dataBuf, &t[k+3]);
+            char *dayC = json_get_value_as_primitive(dataBuf, &t[k+5]);
+            char *hourC = json_get_value_as_primitive(dataBuf, &t[k+7]);
+            char *minC = json_get_value_as_primitive(dataBuf, &t[k+9]);
+            uint32_t duration = atoi(durationC);
+            uint8_t valveIdx = atoi(valve);
+            uint8_t day = atoi(dayC);
+            uint8_t hour = atoi(hourC);
+            uint8_t min = atoi(minC);
+            if ((valveIdx > 0) && (valveIdx <= VALVE_NUMBER) && (duration > 10) && (day <= 7) && (hour <= 23) && (min <= 59)) {
+              ScheduleVector *schedule_vector = getValveScheduleFromValveNumber(valveIdx);
+              // Add entry to schedule
+              schedule_vector_append(schedule_vector, duration, day, hour, min);
+              // Publish updated schedule
+              publishValveSchedule(client, valveIdx);
+            } else {
+              os_printf("Incorect param\n");
+            }
+            os_free(durationC);
+            os_free(valve);
+            os_free(dayC);
+            os_free(hourC);
+            os_free(minC);
+          } else {
+            os_printf("Missing param\n");
+          }
+        }
+      } else if (jsoneq(dataBuf, &t[i+1], "editSlot") == 0) {
+        i += 2;
+        if ((i < r) && (jsoneq(dataBuf, &t[i], "param") == 0)) {
+          uint8_t j, k; 
+          k = i+j+2;
+          if ((t[i+1].type != JSMN_OBJECT) && (t[i+1].size < 6)) {
+            os_printf("Missing param\n");
+          } else if ((jsoneq(dataBuf, &t[k], "valve") == 0) && (jsoneq(dataBuf, &t[k+2], "id") == 0) && (jsoneq(dataBuf, &t[k+4], "duration") == 0) && (jsoneq(dataBuf, &t[k+6], "d") == 0) && (jsoneq(dataBuf, &t[k+8], "h") == 0) && (jsoneq(dataBuf, &t[k+10], "m") == 0)) {
+            char *valve = json_get_value_as_primitive(dataBuf, &t[k+1]);
+            char *idC = json_get_value_as_primitive(dataBuf, &t[k+3]);
+            char *durationC = json_get_value_as_primitive(dataBuf, &t[k+5]);
+            char *dayC = json_get_value_as_primitive(dataBuf, &t[k+7]);
+            char *hourC = json_get_value_as_primitive(dataBuf, &t[k+9]);
+            char *minC = json_get_value_as_primitive(dataBuf, &t[k+11]);
+            uint32_t duration = atoi(durationC);
+            uint8_t id = atoi(idC);
+            uint8_t valveIdx = atoi(valve);
+            uint8_t day = atoi(dayC);
+            uint8_t hour = atoi(hourC);
+            uint8_t min = atoi(minC);
+            if ((valveIdx > 0) && (valveIdx <= VALVE_NUMBER) && (duration > 10) && (day <= 7) && (hour <= 23) && (min <= 59)) {
+              ScheduleVector *schedule_vector = getValveScheduleFromValveNumber(valveIdx);
+              // Add entry to schedule
+              schedule_vector_set(schedule_vector, id, duration, day, hour, min);
+              // Publish updated schedule
+              publishValveSchedule(client, valveIdx);
+            } else {
+              os_printf("Incorect param\n");
+            }
+            os_free(durationC);
+            os_free(idC);
+            os_free(valve);
+            os_free(dayC);
+            os_free(hourC);
+            os_free(minC);
+          } else {
+            os_printf("Missing param\n");
+          }
+        }
+      } else if (jsoneq(dataBuf, &t[i+1], "rmSlot") == 0) {
+        i += 2;
+        if ((i < r) && (jsoneq(dataBuf, &t[i], "param") == 0)) {
+          uint8_t j, k; 
+          k = i+j+2;
+          if ((t[i+1].type != JSMN_OBJECT) && (t[i+1].size < 6)) {
+            os_printf("Missing param\n");
+          } else if ((jsoneq(dataBuf, &t[k], "valve") == 0) && (jsoneq(dataBuf, &t[k+2], "id") == 0)) {
+            char *valve = json_get_value_as_primitive(dataBuf, &t[k+1]);
+            char *idC = json_get_value_as_primitive(dataBuf, &t[k+3]);
+            uint8_t valveIdx = atoi(valve);
+            uint8_t id = atoi(idC);
+            if ((valveIdx > 0) && (valveIdx <= VALVE_NUMBER)) {
+              ScheduleVector *schedule_vector = getValveScheduleFromValveNumber(valveIdx);
+              // Add entry to schedule
+              schedule_vector_remove(schedule_vector, id);
+              // Publish updated schedule
+              publishValveSchedule(client, valveIdx);
+            } else {
+              os_printf("Incorect param\n");
+            }
+            os_free(valve);
+            os_free(idC);
+          } else {
+            os_printf("Missing param\n");
+          }
+        }
+      } else if (jsoneq(dataBuf, &t[i+1], "time") == 0) {
+        i += 2;
+        if ((i < r) && (jsoneq(dataBuf, &t[i], "param") == 0)) {
+          uint8_t j, k; 
+          k = i+j+2;
+          if ((t[i+1].type != JSMN_OBJECT) && (t[i+1].size < 6)) {
+            os_printf("Missing param\n");
+          } else if ((jsoneq(dataBuf, &t[k], "sec") == 0) && (jsoneq(dataBuf, &t[k+2], "min") == 0) && (jsoneq(dataBuf, &t[k+4], "hour") == 0) && (jsoneq(dataBuf, &t[k+6], "dayW") == 0) && (jsoneq(dataBuf, &t[k+8], "dayM") == 0) && (jsoneq(dataBuf, &t[k+10], "month") == 0) && (jsoneq(dataBuf, &t[k+12], "year") == 0)) {
+            char *secC = json_get_value_as_primitive(dataBuf, &t[k+1]);
+            char *minC = json_get_value_as_primitive(dataBuf, &t[k+3]);
+            char *hourC = json_get_value_as_primitive(dataBuf, &t[k+5]);
+            char *dayWC = json_get_value_as_primitive(dataBuf, &t[k+7]);
+            char *dayMC = json_get_value_as_primitive(dataBuf, &t[k+9]);
+            char *monthC = json_get_value_as_primitive(dataBuf, &t[k+11]);
+            char *yearC = json_get_value_as_primitive(dataBuf, &t[k+13]);
+            uint16_t year = atoi(yearC);
+            uint8_t month = atoi(monthC);
+            uint8_t dayM = atoi(dayMC);
+            uint8_t dayW = atoi(dayWC);
+            uint8_t hour = atoi(hourC);
+            uint8_t min = atoi(minC);
+            uint8_t sec = atoi(secC);
+            if ((month <= 12) && (dayM <= 31) && (dayW <= 7) && (hour <= 24) && (min <= 60) && (sec <= 60)) {
+              timeStruct.tm_sec    = sec;
+              timeStruct.tm_min    = min;
+              timeStruct.tm_hour   = hour;
+              timeStruct.tm_mday   = dayM;
+              timeStruct.tm_wday   = dayW;
+              timeStruct.tm_mon    = month;
+              timeStruct.tm_year   = year;
+              pcf8563_setTime(&timeStruct);
+              // Publish updated time
+              publishTime(client);
+            } else {
+              os_printf("Incorect param\n");
+            }
+            os_free(secC);
+            os_free(minC);
+            os_free(hourC);
+            os_free(dayWC);
+            os_free(dayMC);
+            os_free(monthC);
+            os_free(yearC);
+          } else {
+            os_printf("Missing param\n");
           }
         }
       } else if (jsoneq(dataBuf, &t[i+1], "toggle") == 0) {
@@ -424,7 +845,7 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
               os_free(val);
             }
           } else {
-            util_assert(FALSE, "Missing param", NULL);
+            os_printf("Missing param\n");
           }
         }
       } else if (jsoneq(dataBuf, &t[i+1], "restart") == 0) {
@@ -439,7 +860,7 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
               os_free(val);
             }
           } else {
-            util_assert(FALSE, "Missing param", NULL);
+            os_printf("Missing param\n");
           }
         }
       } else if (jsoneq(dataBuf, &t[i+1], "mqttdevpath") == 0) {
@@ -452,13 +873,13 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
               os_free(val);
             }
           } else {
-            util_assert(FALSE, "Missing param", NULL);
+            os_printf("Missing param\n");
           }
         }
       } else {
         char *s = json_get_value_as_string(dataBuf, &t[i+1]);
         if (s != NULL) {
-          util_assert(FALSE, "Unsupported command: %s", s);
+          os_printf("Unsupported command: %s\n", s);
           os_free(s);
         }
       }
@@ -487,7 +908,7 @@ LOCAL void ICACHE_FLASH_ATTR pulseTmerExpireCb(uint8_t arg) {
  * This function handles button sampling, 
  * latching relay control, and LED control
  */
-LOCAL void ICACHE_FLASH_ATTR nodeTimerCb(void *arg) {
+LOCAL void ICACHE_FLASH_ATTR buttonTimerCb(void *arg) {
   uint8_t i, newstate;
   for (i = 0; i < VALVE_NUMBER; ++i) {
     newstate =  easygpio_inputGet(getButtonGpio(i+1));
@@ -507,78 +928,50 @@ LOCAL void ICACHE_FLASH_ATTR nodeTimerCb(void *arg) {
 }
 
 
+LOCAL void ICACHE_FLASH_ATTR minuteCb() {
+  uint8_t i, j;
+  for (i = 1; i <= VALVE_NUMBER; i++) {
+    ScheduleVector *schedule_vector = getValveScheduleFromValveNumber(i);
+    for (j = 0; j < schedule_vector->size; j++) {
+      valve_schedule slot = schedule_vector_get(schedule_vector, j);
+      if ((timeStruct.tm_wday == slot.when.d) && 
+          (timeStruct.tm_hour == slot.when.h) && 
+          (timeStruct.tm_min == slot.when.m)) {
+        valveSet(ON, i);
+        os_timer_arm(getPulseTimer(i), slot.duration, 0);
+        break;
+      }
+    }
+  }
+}
+
 /**
- * System initialization
- * Called once from user_init
+ * 250 millisecond timer callback
+ * This function handles clock sampling, 
  */
-LOCAL void ICACHE_FLASH_ATTR sysInit(void) {
-  // Read in the config sector from flash
-  // configHandle = kvstore_open(KVS_DEFAULT_LOC);
-
-  // const char *ssidKey = commandElements[CMD_SSID].command;
-  // const char *WIFIPassKey = commandElements[CMD_WIFIPASS].command;
-  // const char *devicePathKey = commandElements[CMD_MQTTDEVPATH].command;
-
-  // // Check for default configuration overrides
-  // if(!kvstore_exists(configHandle, ssidKey)){ // if no ssid, assume the rest of the defaults need to be set as well
-  //   kvstore_put(configHandle, ssidKey, configInfoBlock.e[WIFISSID].value);
-  //   kvstore_put(configHandle, WIFIPassKey, configInfoBlock.e[WIFIPASS].value);
-  //   kvstore_put(configHandle, devicePathKey, configInfoBlock.e[MQTTDEVPATH].value);
-
-  //   // Write the KVS back out to flash  
-  
-  //   kvstore_flush(configHandle);
-  // }
-  
-  // // Get the configurations we need from the KVS and store them in the commandElement data area
-    
-  // commandElements[CMD_SSID].p.sp = kvstore_get_string(configHandle, ssidKey); // Retrieve SSID
-  
-  // commandElements[CMD_WIFIPASS].p.sp = kvstore_get_string(configHandle, WIFIPassKey); // Retrieve WIFI Pass
-
-  // commandElements[CMD_MQTTDEVPATH].p.sp = kvstore_get_string(configHandle, devicePathKey); // Retrieve MQTT Device Path
-  
-  // // Initialize MQTT connection 
-  
-  // uint8_t *host = configInfoBlock.e[MQTTHOST].value;
-  // uint32_t port = (uint32_t) atoi(configInfoBlock.e[MQTTPORT].value);
-  
-  // MQTT_InitConnection(&mqttClient, host, port,
-  // (uint8_t) atoi(configInfoBlock.e[MQTTSECUR].value));
-
-  // MQTT_InitClient(&mqttClient, configInfoBlock.e[MQTTDEVID].value, 
-  // configInfoBlock.e[MQTTUSER].value, configInfoBlock.e[MQTTPASS].value,
-  // atoi(configInfoBlock.e[MQTTKPALIV].value), 1);
-
-  // MQTT_OnConnected(&mqttClient, mqttConnectedCb);
-  // MQTT_OnDisconnected(&mqttClient, mqttDisconnectedCb);
-  // MQTT_OnPublished(&mqttClient, mqttPublishedCb);
-  // MQTT_OnData(&mqttClient, mqttDataCb);
-  
-  
+LOCAL void ICACHE_FLASH_ATTR clockTimerCb(void *arg) {
+  struct tm latestTime;
+  if (pcf8563_getTime(&latestTime)) {
+    if (latestTime.tm_min != timeStruct.tm_min) {
+      minuteCb();
+    }
+    timeStruct.tm_sec    = latestTime.tm_sec;
+    timeStruct.tm_min    = latestTime.tm_min;
+    timeStruct.tm_hour   = latestTime.tm_hour;
+    timeStruct.tm_mday   = latestTime.tm_mday;
+    timeStruct.tm_wday   = latestTime.tm_wday;
+    timeStruct.tm_mon    = latestTime.tm_mon;
+    timeStruct.tm_year   = latestTime.tm_year;
+  } else {
+    INFO("Time update failed");
+  }
 }
 
 void user_init(void) {
-  // sysInit();
-
-  // Read in the config sector from flash
-  configHandle = kvstore_open(KVS_DEFAULT_LOC);
-  // Check for default configuration overrides
-  // if(!kvstore_exists(configHandle, "ssid")){ // if no ssid, assume the rest of the defaults need to be set as well
-  //   kvstore_put(configHandle, "ssid", STA_SSID);
-  //   kvstore_put(configHandle, "wifipass", STA_PASS);
-  //   kvstore_put(configHandle, "mqttdevpath", MQTT_DEV_PATH);
-
-  //   // Write the KVS back out to flash  
-  //   kvstore_flush(configHandle);
-  // }
-
-  // // Get the configurations we need from the KVS 
-  // const char *ssidKey = kvstore_get_string(configHandle, "ssid");
-  // const char *WIFIPassKey = kvstore_get_string(configHandle, "wifipass");
-  // const char *devicePathKey = kvstore_get_string(configHandle, "mqttdevpath");
-
   char *buf = util_zalloc(256);
+
+  // Init valve schedule data
+  initSchedule();
   
   // I/O initialization
   gpio_init();
@@ -603,7 +996,7 @@ void user_init(void) {
   easygpio_pinMode(BUTTON4_GPIO, EASYGPIO_PULLUP, EASYGPIO_INPUT);
 
   // Uart init
-  uart_init(BIT_RATE_115200, BIT_RATE_115200);
+  // uart_init(BIT_RATE_115200, BIT_RATE_115200);
   os_delay_us(1000000);
 
   // Last will and testament
@@ -613,8 +1006,16 @@ void user_init(void) {
   // Subtopics
   commandTopic = util_make_sub_topic(MQTT_DEV_PATH/*devicePathKey*/, "command");
   statusTopic = util_make_sub_topic(MQTT_DEV_PATH/*devicePathKey*/, "status");
+  v1ScheduleTopic = util_make_sub_topic(MQTT_DEV_PATH/*devicePathKey*/, "schedule/1");
+  v2ScheduleTopic = util_make_sub_topic(MQTT_DEV_PATH/*devicePathKey*/, "schedule/2");
+  v3ScheduleTopic = util_make_sub_topic(MQTT_DEV_PATH/*devicePathKey*/, "schedule/3");
+  v4ScheduleTopic = util_make_sub_topic(MQTT_DEV_PATH/*devicePathKey*/, "schedule/4");
   INFO("Command subtopic: %s\r\n", commandTopic);
   INFO("Status subtopic: %s\r\n", statusTopic);
+  INFO("Valve 1 schedule subtopic: %s\r\n", v1ScheduleTopic);
+  INFO("Valve 2 schedule subtopic: %s\r\n", v2ScheduleTopic);
+  INFO("Valve 3 schedule subtopic: %s\r\n", v3ScheduleTopic);
+  INFO("Valve 4 schedule subtopic: %s\r\n", v4ScheduleTopic);
 
   // Initialize MQTT connection  
   MQTT_InitConnection(&mqttClient, MQTT_HOST, MQTT_PORT, DEFAULT_SECURITY);
@@ -637,9 +1038,17 @@ void user_init(void) {
   os_timer_disarm(&pulseTimer4);
   os_timer_setfn(&pulseTimer4, (os_timer_func_t *)pulseTmerExpireCb, (uint8_t)4);
   os_timer_disarm(&buttonTimer);
-  os_timer_setfn(&buttonTimer, (os_timer_func_t *)nodeTimerCb, (void *)0);
+  os_timer_setfn(&buttonTimer, (os_timer_func_t *)buttonTimerCb, (void *)0);
   // Timer to execute code every 100 mSec
   os_timer_arm(&buttonTimer, 100, 1);
+
+  // RTC clock
+  // Set timer to check time every 100ms 
+  os_timer_disarm(&clockTimer);
+  os_timer_setfn(&clockTimer, (os_timer_func_t *)clockTimerCb, (void *)0);
+  os_timer_arm(&clockTimer, 100, 1);
+  // Init PCF8563
+  pcf8563_init(); 
 
   // Free working buffer
   util_free(buf);
