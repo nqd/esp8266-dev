@@ -3,7 +3,7 @@
 
 /*DEFAULT CONFIGURATIONS*/
 
-#define MQTT_HOST       "192.168.1.212" 			// "test.mosquitto.org"
+#define MQTT_HOST       "broker.mqtt-dashboard.com" 			// "test.mosquitto.org"
 #define MQTT_PORT       1883 	//
 #define MQTT_KEEPALIVE  120  /*second*/
 
@@ -16,7 +16,7 @@
 #define STA_PASS "fit@dhcn"
 #define STA_TYPE AUTH_WPA2_PSK
 
-#define DEFAULT_SECURITY        1
+#define DEFAULT_SECURITY        0
 #define QUEUE_BUFFER_SIZE       2048
 
 //#define PROTOCOL_NAMEv31  /*MQTT version 3.1 compatible with Mosquitto v0.15*/

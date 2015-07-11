@@ -18,11 +18,6 @@
 #define REPORT os_printf
 #endif
 
-unsigned char *default_certificate;
-unsigned int default_certificate_len = 0;
-unsigned char *default_private_key;
-unsigned int default_private_key_len = 0;
-
 static uint8_t is_running = 0;
 uint32_t version_fwr;
 
