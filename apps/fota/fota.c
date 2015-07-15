@@ -18,7 +18,6 @@
 #define REPORT os_printf
 #endif
 
-
 static uint8_t is_running = 0;
 uint32_t version_fwr;
 

@@ -1,14 +1,27 @@
 #ifndef _MQTT_CONFIG_H_
 #define _MQTT_CONFIG_H_
 
-#define MQTT_BUF_SIZE               1024
-#define MQTT_RECONNECT_TIMEOUT      5 /*second*/
+#include "user_config.h"
 
-#ifndef MQTT_SSL_SIZE
-#define MQTT_SSL_SIZE					5012
+#ifndef MQTT_BUF_SIZE
+#define MQTT_BUF_SIZE               1024
 #endif
 
+#ifndef MQTT_RECONNECT_TIMEOUT
+#define MQTT_RECONNECT_TIMEOUT      5 /*second*/
+#endif
+
+#ifndef QUEUE_BUFFER_SIZE
+#define QUEUE_BUFFER_SIZE		 	2048
+#endif
+
+#ifndef MQTT_SSL_SIZE
+#define MQTT_SSL_SIZE					4096
+#endif
+
+#ifndef MQTT_CA_CHECK
 #define MQTT_CA_CHECK 				0
+#endif
 
 #ifndef MQTT_CA_FLASH_SECTOR
 #define MQTT_CA_FLASH_SECTOR 	200

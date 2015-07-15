@@ -19,7 +19,11 @@
 static os_timer_t connect_check_timer;
 static fota_client_t fota_client;
 
-#define MIN(a,b) ((a)>(b)?(b):(a))
+// we do not use this app as SSL server
+unsigned char *default_certificate;
+unsigned int default_certificate_len = 0;
+unsigned char *default_private_key;
+unsigned int default_private_key_len = 0;
 
 LOCAL void ICACHE_FLASH_ATTR
 connect_status_check(void *arg)

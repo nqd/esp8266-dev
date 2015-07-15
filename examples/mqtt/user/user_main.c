@@ -39,6 +39,12 @@
 
 MQTT_Client mqttClient;
 
+// we do not use this app as SSL server
+unsigned char *default_certificate;
+unsigned int default_certificate_len = 0;
+unsigned char *default_private_key;
+unsigned int default_private_key_len = 0;
+
 void do_report(void *args)
 {
   static ETSTimer report_timer;
