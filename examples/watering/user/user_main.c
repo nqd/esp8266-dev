@@ -56,7 +56,7 @@ MQTT_Client mqttClient;
 
 // Definition for valves schedule element
 struct schedule_tag {
-  int isInit;
+  int isInit[4];
   ScheduleVector *v1;
   ScheduleVector *v2;
   ScheduleVector *v3;
@@ -95,7 +95,10 @@ LOCAL void ICACHE_FLASH_ATTR initSchedule() {
   valves_schedule.v2 = ptr2;
   valves_schedule.v3 = ptr3;
   valves_schedule.v4 = ptr4;
-  valves_schedule.isInit = 0;
+  valves_schedule.isInit[0] = 0;
+  valves_schedule.isInit[1] = 0;
+  valves_schedule.isInit[2] = 0;
+  valves_schedule.isInit[3] = 0;
 }
 
 /**
@@ -181,6 +184,20 @@ LOCAL char* ICACHE_FLASH_ATTR getValveTopicFromValveNumber(int valve){
     return v3ScheduleTopic;
   else if (valve == 4) 
     return v4ScheduleTopic;
+}
+
+/**
+ * Return valve topic matching valve number
+ */
+LOCAL int ICACHE_FLASH_ATTR getValveNumberFromTopic(char* topic){
+  if (!os_strcmp(topic, v1ScheduleTopic)) 
+    return 1;
+  else if (!os_strcmp(topic, v2ScheduleTopic)) 
+    return 2;
+  else if (!os_strcmp(topic, v3ScheduleTopic)) 
+    return 3;
+  else if (!os_strcmp(topic, v4ScheduleTopic)) 
+    return 4;
 }
 
 /**
@@ -509,6 +526,7 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
   
   if ((!os_strcmp(topicBuf, v1ScheduleTopic)) || (!os_strcmp(topicBuf, v2ScheduleTopic)) || (!os_strcmp(topicBuf, v3ScheduleTopic)) || (!os_strcmp(topicBuf, v4ScheduleTopic))) {   
     ScheduleVector *schedule_vector = getValveScheduleFromTopic(topicBuf);
+    int valve_number = getValveNumberFromTopic(topicBuf);
     jsmn_init(&p);
     r = jsmn_parse(&p, dataBuf, os_strlen(dataBuf), t, sizeof(t)/sizeof(t[0]));
     if (r < 0) {
@@ -527,13 +545,13 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
     }
 
     // Check if schedule has already been init 
-    if (valves_schedule.isInit){
+    if (valves_schedule.isInit[valve_number-1]){
       os_printf("Schedule already init\n");
       util_free(topicBuf);
       util_free(dataBuf);
       return;
     }
-    valves_schedule.isInit = 1;
+    valves_schedule.isInit[valve_number-1] = 1;
 
     if (t[0].size <= 0) {
       os_printf("Empty array\n");
@@ -691,6 +709,12 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
             uint8_t min = atoi(minC);
             if ((valveIdx > 0) && (valveIdx <= VALVE_NUMBER) && (duration > 10) && (day <= 7) && (hour <= 23) && (min <= 59)) {
               ScheduleVector *schedule_vector = getValveScheduleFromValveNumber(valveIdx);
+              // Check if schedule has been init 
+              if (!valves_schedule.isInit[valveIdx-1]){
+                schedule_vector_init(schedule_vector, 4);
+                valves_schedule.isInit[valveIdx-1] = 1;
+              }
+
               // Add entry to schedule
               schedule_vector_append(schedule_vector, duration, day, hour, min);
               // Publish updated schedule
@@ -729,10 +753,13 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
             uint8_t min = atoi(minC);
             if ((valveIdx > 0) && (valveIdx <= VALVE_NUMBER) && (duration > 10) && (day <= 7) && (hour <= 23) && (min <= 59)) {
               ScheduleVector *schedule_vector = getValveScheduleFromValveNumber(valveIdx);
-              // Add entry to schedule
-              schedule_vector_set(schedule_vector, id, duration, day, hour, min);
-              // Publish updated schedule
-              publishValveSchedule(client, valveIdx);
+              // Check if schedule has been init 
+              if (valves_schedule.isInit[valveIdx-1]){
+                // Add entry to schedule
+                schedule_vector_set(schedule_vector, id, duration, day, hour, min);
+                // Publish updated schedule
+                publishValveSchedule(client, valveIdx);
+              }
             } else {
               os_printf("Incorect param\n");
             }
@@ -760,10 +787,12 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
             uint8_t id = atoi(idC);
             if ((valveIdx > 0) && (valveIdx <= VALVE_NUMBER)) {
               ScheduleVector *schedule_vector = getValveScheduleFromValveNumber(valveIdx);
-              // Add entry to schedule
-              schedule_vector_remove(schedule_vector, id);
-              // Publish updated schedule
-              publishValveSchedule(client, valveIdx);
+              if (valves_schedule.isInit[valveIdx-1]){
+                // Add entry to schedule
+                schedule_vector_remove(schedule_vector, id);
+                // Publish updated schedule
+                publishValveSchedule(client, valveIdx);
+              }
             } else {
               os_printf("Incorect param\n");
             }
@@ -938,7 +967,7 @@ LOCAL void ICACHE_FLASH_ATTR minuteCb() {
           (timeStruct.tm_hour == slot.when.h) && 
           (timeStruct.tm_min == slot.when.m)) {
         valveSet(ON, i);
-        os_timer_arm(getPulseTimer(i), slot.duration, 0);
+        os_timer_arm(getPulseTimer(i), slot.duration * 1000, 0);
         break;
       }
     }
@@ -972,6 +1001,7 @@ void user_init(void) {
 
   // Init valve schedule data
   initSchedule();
+  schedule_vector_init(valves_schedule.v1, 7);
   
   // I/O initialization
   gpio_init();

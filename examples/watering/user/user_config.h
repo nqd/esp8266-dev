@@ -10,12 +10,12 @@
 #define BUTTON1_GPIO 12				// GPIO to use for button 1
 #define BUTTON2_GPIO 0				// GPIO to use for button 2
 #define BUTTON3_GPIO 5				// GPIO to use for button 3
-#define BUTTON4_GPIO 4				// GPIO to use for button 4
+#define BUTTON4_GPIO 1				// GPIO to use for button 4
 
 #define VALVE1_GPIO 13				// GPIO to use for valve 1
 #define VALVE2_GPIO 16				// GPIO to use for valve 2
 #define VALVE3_GPIO 3				// GPIO to use for valve 3
-#define VALVE4_GPIO 1				// GPIO to use for valve 4
+#define VALVE4_GPIO 4				// GPIO to use for valve 4
 #define VALVE_NUMBER 4
 
 #define ON 1
@@ -58,12 +58,12 @@
 //PROTOCOL_NAMEv311     /*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
 
 // FOTA params
-#define UPDATE_SERVER_IP    "localhost"
+#define UPDATE_SERVER_IP    "192.168.1.14"
 #define UPDATE_SERVER_PORT  3000
 
-#define OTA_UUID          "557d2bfc96ce74ff3e78469f"
-#define OTA_TOKEN         "cb21211edf824fdb64f7199df5aa104fdd2aa00747256221d40bb82058797592"
-#define OTA_CLIENT        "ESP"
+#define OTA_UUID          "559e6070eb6e69db119d1eed"
+#define OTA_TOKEN         "85f1b75f8d9eb979b8f3ca390128626de0bf2fc5159e72322411d5b8fdce8043"
+#define OTA_CLIENT        "esp8266 watering"
 #define OTA_VERSION       VERSION
 
 #define FOTA_SECURE       0

@@ -188,7 +188,7 @@ start_cdn(fota_cdn_t *fota_cdn, char *version, char *host, char *url, char *prot
   }
   else {
     fota_cdn->secure = 0;
-    fota_cdn->port = 80;
+    fota_cdn->port = 3000;
   }
 
   fota_cdn->host = (char*)os_zalloc(os_strlen(host)+1);

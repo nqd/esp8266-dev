@@ -11,3 +11,4 @@ webpages.espfs
 espfstest/*.o
 espfstest/espfstest
 **/wifi_config.h
+examples/watering/TestLOL
