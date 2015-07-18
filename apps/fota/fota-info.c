@@ -183,12 +183,19 @@ get_version_recon_cb(void *arg, sint8 err)
   INFO("FOTA Client: reconnect callback, code %d\n", err);
   struct espconn *pespconn = arg;
   fota_client_t *fota_client = (fota_client_t *)pespconn->reverse;
+
   if (fota_client->status != FOTA_GETTING_FIRMWARE)
     fota_client->status = FOTA_IDLE;
+
+  INFO("State of esp conn: %d\n", pespconn->state);
   if (FOTA_SECURE)
     espconn_secure_disconnect((struct espconn *)arg);
   else
     espconn_disconnect((struct espconn *)arg);
+
+  // when host failed to connect, disconnect will not work,
+  // need to clean connection to avoid mem leak
+  clear_espconn(pespconn);
 }
 
 /**
