@@ -185,10 +185,10 @@ get_version_recon_cb(void *arg, sint8 err)
   fota_client_t *fota_client = (fota_client_t *)pespconn->reverse;
   if (fota_client->status != FOTA_GETTING_FIRMWARE)
     fota_client->status = FOTA_IDLE;
-  // if (FOTA_SECURE)
-  //   espconn_secure_disconnect((struct espconn *)arg);
-  // else
-  //   espconn_disconnect((struct espconn *)arg);
+  if (FOTA_SECURE)
+    espconn_secure_disconnect((struct espconn *)arg);
+  else
+    espconn_disconnect((struct espconn *)arg);
 }
 
 /**
