@@ -400,13 +400,32 @@ LOCAL void ICACHE_FLASH_ATTR valveToggle(uint8_t valve)
 
 
 /**
+ * FOTA Timers cb
+ * Used to disable timers during FOTA
+ */
+
+LOCAL void ICACHE_FLASH_ATTR fotaTimersCb(enum fota_status status) {
+  if (status == FOTA_BUSY) {
+    INFO("Timers disabled");
+    os_timer_disarm(&clockTimer);
+    os_timer_disarm(&buttonTimer);
+  } else if (status == FOTA_IDLE) {
+    os_timer_arm(&buttonTimer, 100, 1);
+    os_timer_arm(&clockTimer, 100, 1);
+    INFO("Timers reenabled");
+  }
+
+}
+
+
+/**
  * WIFI connect call back
  */
 
 LOCAL void ICACHE_FLASH_ATTR wifiConnectCb(uint8_t status) {
   if(status == STATION_GOT_IP){
     MQTT_Connect(&mqttClient);
-    // start_fota(&fota_client, INTERVAL, UPDATE_SERVER_IP, UPDATE_SERVER_PORT, OTA_UUID, OTA_TOKEN);
+    start_fota(&fota_client, INTERVAL, UPDATE_SERVER_IP, UPDATE_SERVER_PORT, OTA_UUID, OTA_TOKEN, fotaTimersCb);
   } else {
     MQTT_Disconnect(&mqttClient);
   }
@@ -1012,8 +1031,8 @@ void user_init(void) {
   easygpio_pinMode(VALVE2_GPIO, EASYGPIO_NOPULL, EASYGPIO_OUTPUT);
   easygpio_outputSet(VALVE2_GPIO, OFF);
   
-  easygpio_pinMode(VALVE3_GPIO, EASYGPIO_NOPULL, EASYGPIO_OUTPUT);
-  easygpio_outputSet(VALVE3_GPIO, OFF);
+  // easygpio_pinMode(VALVE3_GPIO, EASYGPIO_NOPULL, EASYGPIO_OUTPUT);
+  // easygpio_outputSet(VALVE3_GPIO, OFF);
   
   easygpio_pinMode(VALVE4_GPIO, EASYGPIO_NOPULL, EASYGPIO_OUTPUT);
   easygpio_outputSet(VALVE4_GPIO, OFF);
@@ -1022,10 +1041,10 @@ void user_init(void) {
   easygpio_pinMode(BUTTON1_GPIO, EASYGPIO_PULLUP, EASYGPIO_INPUT);
   easygpio_pinMode(BUTTON2_GPIO, EASYGPIO_PULLUP, EASYGPIO_INPUT);
   easygpio_pinMode(BUTTON3_GPIO, EASYGPIO_PULLUP, EASYGPIO_INPUT);
-  easygpio_pinMode(BUTTON4_GPIO, EASYGPIO_PULLUP, EASYGPIO_INPUT);
+  // easygpio_pinMode(BUTTON4_GPIO, EASYGPIO_PULLUP, EASYGPIO_INPUT);
 
   // Uart init
-  // uart_init(BIT_RATE_115200, BIT_RATE_115200);
+  uart_init(BIT_RATE_115200, BIT_RATE_115200);
   os_delay_us(1000000);
 
   // Last will and testament
