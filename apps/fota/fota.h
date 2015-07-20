@@ -25,8 +25,11 @@ Content-Type: application/json\r\n"
 enum fota_status {
   FOTA_POLLING,
   FOTA_GETTING_FIRMWARE,
-  FOTA_IDLE
+  FOTA_IDLE,
+  FOTA_BUSY
 };
+
+typedef void (*users_timers_cb_t)(enum fota_status fota_status);
 
 typedef struct {
   char *host;
@@ -48,10 +51,11 @@ typedef struct {
   os_timer_t periodic;
   os_timer_t request_timeout;
   fota_cdn_t fw_server;
+  users_timers_cb_t users_timers_cb;
   enum fota_status status;
 } fota_client_t;
 
-void start_fota(fota_client_t *client, uint32_t interval, char *host, uint16_t port, char *id, char* token);
+void start_fota(fota_client_t *client, uint32_t interval, char *host, uint16_t port, char *id, char* token, users_timers_cb_t users_timers_cb);
 void stop_fota(fota_client_t *client);
 
 #endif
