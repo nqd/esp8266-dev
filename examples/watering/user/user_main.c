@@ -47,7 +47,7 @@
 #include "mqtt.h"
 #include "fota.h"
 #include "schedule_vector.h"
-#include "driver/pcf8563.h"
+#include "pcf8563.h"
 
 
 
@@ -139,9 +139,9 @@ LOCAL void ICACHE_FLASH_ATTR publishConnInfo(MQTT_Client *client)
       *((uint8_t *) &ipConfig.ip.addr + 3),
       STA_SSID,
       freeRam,
-      timeStruct.tm_sec,
-      timeStruct.tm_min,
       timeStruct.tm_hour,
+      timeStruct.tm_min,
+      timeStruct.tm_sec,
       timeStruct.tm_wday,
       timeStruct.tm_mday,
       timeStruct.tm_mon,
@@ -216,7 +216,7 @@ LOCAL void ICACHE_FLASH_ATTR publishValveSchedule(MQTT_Client *client, int valve
 
   for (i = 0; i < schedule_vector->size; i++) {
     valve_schedule slot = schedule_vector_get(schedule_vector, i);
-    os_sprintf(strlen(buf)+ buf, "{\"id\":\"%d\",\"duration\":\"%d\",\"d\":\"%d\",\"h\":\"%d\",\"m\":\"%d\"}", i, slot.duration, slot.when.d, slot.when.h, slot.when.m);
+    os_sprintf(strlen(buf)+ buf, "{\"id\":%d,\"duration\":%d,\"d\":%d,\"h\":%d,\"m\":%d}", i, slot.duration, slot.when.d, slot.when.h, slot.when.m);
     if (i < schedule_vector->size - 1) {
       os_sprintf(strlen(buf)+ buf, ",");
     }
@@ -241,9 +241,9 @@ LOCAL void ICACHE_FLASH_ATTR publishTime(MQTT_Client *client) {
     
   // Publish time
   os_sprintf(buf, "{\"time\":\"%d:%d:%d-%d?%d/%d/%d\"}",
-      timeStruct.tm_sec,
-      timeStruct.tm_min,
       timeStruct.tm_hour,
+      timeStruct.tm_min,
+      timeStruct.tm_sec,
       timeStruct.tm_wday,
       timeStruct.tm_mday,
       timeStruct.tm_mon,
@@ -406,7 +406,7 @@ LOCAL void ICACHE_FLASH_ATTR valveToggle(uint8_t valve)
 LOCAL void ICACHE_FLASH_ATTR wifiConnectCb(uint8_t status) {
   if(status == STATION_GOT_IP){
     MQTT_Connect(&mqttClient);
-    start_fota(&fota_client, INTERVAL, UPDATE_SERVER_IP, UPDATE_SERVER_PORT, OTA_UUID, OTA_TOKEN);
+    // start_fota(&fota_client, INTERVAL, UPDATE_SERVER_IP, UPDATE_SERVER_PORT, OTA_UUID, OTA_TOKEN);
   } else {
     MQTT_Disconnect(&mqttClient);
   }
@@ -551,7 +551,6 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
       util_free(dataBuf);
       return;
     }
-    valves_schedule.isInit[valve_number-1] = 1;
 
     if (t[0].size <= 0) {
       os_printf("Empty array\n");
@@ -559,7 +558,8 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
       util_free(dataBuf);
       return;
     } else {
-      schedule_vector_init(schedule_vector, t[0].size);
+      schedule_vector_init(schedule_vector, 10/*t[0].size*/);
+      valves_schedule.isInit[valve_number-1] = 1;
     }
 
     for (i = 1; i < r; i++) {
@@ -568,7 +568,7 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
         continue;
       } else {
         uint8_t j;
-        int8_t id = 0;
+        int8_t id = -1;
         int8_t day = -1;
         int8_t hour = -1;
         int8_t min = -1;
@@ -612,7 +612,8 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
           }
         }
         if ((id >= 0) && (day >= 0) && (hour >= 0) && (min >= 0) && (duration >= 0)) {
-          schedule_vector_set(schedule_vector, id, duration, day, hour, min);
+          schedule_vector_append(schedule_vector, duration, day, hour, min);
+          INFO("Init Entry added, capacity:%d, size:%d", schedule_vector->capacity, schedule_vector->size);
         }
         i += t[i].size * 2;
       }
@@ -710,8 +711,8 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
             if ((valveIdx > 0) && (valveIdx <= VALVE_NUMBER) && (duration > 10) && (day <= 7) && (hour <= 23) && (min <= 59)) {
               ScheduleVector *schedule_vector = getValveScheduleFromValveNumber(valveIdx);
               // Check if schedule has been init 
-              if (!valves_schedule.isInit[valveIdx-1]){
-                schedule_vector_init(schedule_vector, 4);
+              if (!valves_schedule.isInit[valveIdx-1]) {
+                schedule_vector_init(schedule_vector, 10);
                 valves_schedule.isInit[valveIdx-1] = 1;
               }
 
@@ -859,7 +860,6 @@ LOCAL void ICACHE_FLASH_ATTR mqttDataCb(uint32_t *args, const char* topic, uint3
         i += 2;
         int8_t valveIdx;
         if ((valveIdx = util_check_command_param(i, r, t, dataBuf)) > 0) {
-          INFO("Valeur param dans query :%d\r\n", valveIdx);
           updateValveState(valveState[valveIdx-1], valveIdx);
         }          
       } else if (jsoneq(dataBuf, &t[i+1], "survey") == 0) {
@@ -992,7 +992,7 @@ LOCAL void ICACHE_FLASH_ATTR clockTimerCb(void *arg) {
     timeStruct.tm_mon    = latestTime.tm_mon;
     timeStruct.tm_year   = latestTime.tm_year;
   } else {
-    INFO("Time update failed");
+    INFO("Time update failed\n");
   }
 }
 
@@ -1001,7 +1001,6 @@ void user_init(void) {
 
   // Init valve schedule data
   initSchedule();
-  schedule_vector_init(valves_schedule.v1, 7);
   
   // I/O initialization
   gpio_init();

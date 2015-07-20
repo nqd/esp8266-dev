@@ -13,7 +13,7 @@ SDK_BASE   = /opt/esp-open-sdk/sdk
 ESPPORT    ?= /dev/tty.usbserial-A9EP1RVF
 ESPTOOL    = $(ROOT)/tools/esptool/esptool.py
 # script to gen bin
-GEN_APPBIN = $(SDK_BASE)/tools/gen_appbin.py
+GEN_APPBIN = $(SDK_BASE)/gen_appbin.py
 # script to upload firmware for OTA
 FOTA_CLIENT = $(ROOT)/tools/fotaclient/fota-client.js
 # name for the target project

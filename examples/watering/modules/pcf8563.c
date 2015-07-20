@@ -3,7 +3,7 @@
 #include "osapi.h"
 #include "pcf8563.h"
 
-#include "driver/i2c_master.h"
+#include "i2c_master.h"
 
 #define DEBUG(...) os_printf(__VA_ARGS__)
 #define INFO(...) os_printf(__VA_ARGS__)
@@ -96,8 +96,8 @@ bool ICACHE_FLASH_ATTR pcf8563_setTime(struct tm *time) {
   data[1] = decToBcd(time->tm_sec);
   data[2] = decToBcd(time->tm_min);
   data[3] = decToBcd(time->tm_hour);
-  data[4] = decToBcd(time->tm_wday);
-  data[5] = decToBcd(time->tm_mday);
+  data[4] = decToBcd(time->tm_mday);
+  data[5] = decToBcd(time->tm_wday);
   data[6] = decToBcd(time->tm_mon);
   data[7] = decToBcd(time->tm_year);
 

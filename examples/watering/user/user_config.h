@@ -9,13 +9,13 @@
 
 #define BUTTON1_GPIO 12				// GPIO to use for button 1
 #define BUTTON2_GPIO 0				// GPIO to use for button 2
-#define BUTTON3_GPIO 5				// GPIO to use for button 3
+#define BUTTON3_GPIO 4				// GPIO to use for button 3
 #define BUTTON4_GPIO 1				// GPIO to use for button 4
 
 #define VALVE1_GPIO 13				// GPIO to use for valve 1
 #define VALVE2_GPIO 16				// GPIO to use for valve 2
 #define VALVE3_GPIO 3				// GPIO to use for valve 3
-#define VALVE4_GPIO 4				// GPIO to use for valve 4
+#define VALVE4_GPIO 5				// GPIO to use for valve 4
 #define VALVE_NUMBER 4
 
 #define ON 1
@@ -68,6 +68,6 @@
 
 #define FOTA_SECURE       0
 
-#define INTERVAL          (30*1000)      // milisecond
+#define INTERVAL          (60*1000)      // milisecond
 
 #endif

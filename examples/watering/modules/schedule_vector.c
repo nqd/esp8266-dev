@@ -16,9 +16,11 @@ void ICACHE_FLASH_ATTR schedule_vector_init(ScheduleVector *schedule_vector, uin
 
   // allocate memory for schedule_vector->data
   schedule_vector->data = util_zalloc(sizeof(valve_schedule) * schedule_vector->capacity);
+  INFO("Vector %p init with capacity: %d\n",schedule_vector, capacity);
 }
 
 void ICACHE_FLASH_ATTR schedule_vector_append(ScheduleVector *schedule_vector, uint32_t duration, uint8_t day, uint8_t hour, uint8_t min) {
+  INFO("Vector append, size: %d, capacity: %d, duration: %d, day:%d\n", schedule_vector->size, schedule_vector->capacity, duration, day);
   schedule_vector_double_capacity_if_full(schedule_vector);
   schedule_vector->data[schedule_vector->size].duration = duration;
   schedule_vector->data[schedule_vector->size].when.d = day;
@@ -28,14 +30,14 @@ void ICACHE_FLASH_ATTR schedule_vector_append(ScheduleVector *schedule_vector, u
 }
 
 valve_schedule ICACHE_FLASH_ATTR schedule_vector_get(ScheduleVector *schedule_vector, uint8_t index) {
-  if (index >= schedule_vector->size || index < 0) {
+  if ((index >= schedule_vector->size) || (index < 0)) {
     util_assert(FALSE, "Index %d out of bounds for schedule_vector of size %d\n", index, schedule_vector->size);
   }
   return schedule_vector->data[index];
 }
 
 void ICACHE_FLASH_ATTR schedule_vector_set(ScheduleVector *schedule_vector, uint8_t index, uint32_t duration, uint8_t day, uint8_t hour, uint8_t min) {
-  if (index >= schedule_vector->size || index < 0) {
+  if ((index >= schedule_vector->size) || (index < 0)) {
     INFO("Index %d out of bounds for schedule_vector of capacity %d\n", index, schedule_vector->capacity);
     return;
   }
@@ -46,7 +48,7 @@ void ICACHE_FLASH_ATTR schedule_vector_set(ScheduleVector *schedule_vector, uint
 }
 
 void ICACHE_FLASH_ATTR schedule_vector_remove(ScheduleVector *schedule_vector, uint8_t index) {
-  if (index >= schedule_vector->size || index < 0) {
+  if ((index >= schedule_vector->size) || (index < 0)) {
     INFO("Index %d out of bounds for schedule_vector of capacity %d\n", index, schedule_vector->capacity);
     return;
   }
