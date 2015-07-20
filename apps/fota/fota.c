@@ -55,6 +55,12 @@ fota_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 LOCAL void ICACHE_FLASH_ATTR
 fota_ticktock(fota_client_t *fota_client)
 {
+  // Disable user's timers
+  if(fota_client->users_timers_cb) {
+    fota_client->users_timers_cb(FOTA_BUSY);
+  }
+
+
   if (fota_client->status != FOTA_IDLE) {
     // INFO("FOTA is polling, quit\n");
     return;
@@ -91,10 +97,16 @@ fota_ticktock(fota_client_t *fota_client)
       (ip_addr_t *)(fota_client->conn->proto.tcp->remote_ip),
       fota_dns_found);
   }
+
+  // Enable user's timers
+  if(fota_client->users_timers_cb) {
+    fota_client->users_timers_cb(FOTA_IDLE);
+  }
+
 }
 
 void ICACHE_FLASH_ATTR
-start_fota(fota_client_t *fota_client, uint32_t interval, char *host, uint16_t port, char *id, char* token)
+start_fota(fota_client_t *fota_client, uint32_t interval, char *host, uint16_t port, char *id, char* token, users_timers_cb_t users_timers_cb)
 {
   if (is_running) {
     REPORT("FOTA is called only one time, exit\n");
@@ -122,6 +134,8 @@ start_fota(fota_client_t *fota_client, uint32_t interval, char *host, uint16_t p
   // token
   fota_client->token = (char*)os_zalloc(os_strlen(token)+1);
   os_memcpy(fota_client->token, token, os_strlen(token));
+  // user's timers cb
+  fota_client->users_timers_cb = users_timers_cb;
 
   // reverse
   fota_client->fw_server.reverse = (void*)fota_client;

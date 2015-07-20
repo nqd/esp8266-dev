@@ -32,7 +32,7 @@ connect_status_check(void *arg)
   if (wifi_station_get_connect_status() == STATION_GOT_IP) {
     os_printf("Got IP, start update\n");
     // start fota session
-    start_fota(&fota_client, INTERVAL, UPDATE_SERVER_IP, UPDATE_SERVER_PORT, OTA_UUID, OTA_TOKEN);
+    start_fota(&fota_client, INTERVAL, UPDATE_SERVER_IP, UPDATE_SERVER_PORT, OTA_UUID, OTA_TOKEN, NULL);
   }
   else {
     os_timer_disarm(&connect_check_timer);
