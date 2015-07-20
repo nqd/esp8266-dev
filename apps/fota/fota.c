@@ -94,7 +94,7 @@ fota_ticktock(fota_client_t *fota_client)
 }
 
 void ICACHE_FLASH_ATTR
-start_fota(fota_client_t *fota_client, uint16_t interval, char *host, uint16_t port, char *id, char* token)
+start_fota(fota_client_t *fota_client, uint32_t interval, char *host, uint16_t port, char *id, char* token)
 {
   if (is_running) {
     REPORT("FOTA is called only one time, exit\n");

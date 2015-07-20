@@ -43,7 +43,7 @@ typedef struct {
   char *uuid;
   char *token;
   char *host;
-  uint16_t interval;
+  uint32_t interval;
   struct espconn *conn;
   os_timer_t periodic;
   os_timer_t request_timeout;
@@ -51,7 +51,7 @@ typedef struct {
   enum fota_status status;
 } fota_client_t;
 
-void start_fota(fota_client_t *client, uint16_t interval, char *host, uint16_t port, char *id, char* token);
+void start_fota(fota_client_t *client, uint32_t interval, char *host, uint16_t port, char *id, char* token);
 void stop_fota(fota_client_t *client);
 
 #endif
