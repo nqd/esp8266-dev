@@ -3,6 +3,7 @@
 
 #include "osapi.h"
 
+
 #define pHeadStatic "Connection: keep-alive\r\n\
 Cache-Control: no-cache\r\n\
 User-Agent: ESP8266\r\n\
