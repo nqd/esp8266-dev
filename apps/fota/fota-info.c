@@ -13,15 +13,12 @@
 #include "fota-firmware.h"
 #include "fota-util.h"
 
-#define INFO
-#define REPORT
-
-#ifndef INFO
-#define INFO os_printf
-#endif
-
-#ifndef REPORT
-#define REPORT os_printf
+#if 0
+#define INFO(...) os_printf(__VA_ARGS__)
+#define REPORT(...) os_printf(__VA_ARGS__)
+#else
+#define INFO(...)
+#define REPORT(...)
 #endif
 
 extern uint32_t version_fwr;
