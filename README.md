@@ -1,63 +1,59 @@
 ## Why this?
-Short: I do not like the developing environment provided by Espressif. Then I rewrite Makefile to:
-- reuse common code, e.g. MQTT, flash file system, and driver for SoC peripherals.
-- have other json parsing. Current json parsing of SDK (take from Contiki OS) is not good enough, I have no way to check if this/that string is a valid JSON.
-- quick setup, e.g. make, make flash, make login, make OTA=1 fash.
-- make firmware over-the-air update easy, e.g. make RELEASE=MINOR/MINOR/PATCH. This is the on going process.
+Short: I do not like the developing environment provided by Espressif. Then I rewrite Makefile (mostly) to:
+- avoid duplicate codes by reuse common modules, e.g. MQTT, flash file system, and drivers for SoC peripherals.
+- make firmware over-the-air update easy
+- quick setup with Makefile in each program
 
-All examples have been testing with 512KB Module-01 and 4MB Module-12.
+This dev env will use as much (closed blobs) libs from Espressif as possible. However, current json parsing of SDK (taken from Contiki OS) is not good enough, I have no way to check if this/that string is a valid one, then I decided to use [jsmn](https://bitbucket.org/zserge/jsmn)
 
-## Setup env
+All examples have been testing with SDK 1.2.0, 4MB Module-12. 512KB Module-01 is considered out of date.
 
-Use with SDK v1.1.2, setup with esp-open-sdk. With location of esp-open-sdk, change ESPRESSIF_ROOT in Makefile.common to point to this SDK. We will use lib, include, ld codes/scripts from SDK, ah, together with compiling tools off-course.
-
-To use OTA update firmware with 512KB, change linker file ld/eagle.app.v6.new.512.app1/2.ld, section irom0_0_seg to have more spaces. Please note that Module with 512KB is very small for current SDK, recommend to use bigger flash.
-
+## Begin
+1. Install compiler for ESP with [esp-open-sdk](https://github.com/pfalcon/esp-open-sdk). It would be good if you install at HOME.
+2. Clone this project
 ```
-<  irom0_0_seg :                         org = 0x40241010, len = 0x2B000
----
->  irom0_0_seg :                         org = 0x40201010, len = 0x31000
+git clone --recursive https://github.com/nqd/esp8266-dev.git
 ```
 
-I update tools/gen_appbin.py to avoid compiling error. Off-course I can change $PATH of shell to avoid touching this Python script.
-```
-<         cmd = 'xtensa-lx106-elf-nm -g ' + elf_file + ' > eagle.app.sym'
----
->         cmd = '~/esp-open-sdk/xtensa-lx106-elf/bin/xtensa-lx106-elf-nm -g ' + elf_file + ' > eagle.app.sym'
-```
+3. Try OTA example under ```examples/ota-update```
 
-## OTA server
-A simple enough to use OTA server could be found at https://github.com/ubisen/ota-update/, wrote in nodejs with mongodb to store images. It's recommended to setup a server locally, but the code is good enough to run in public domain.
-Normally, a proxy like nginx is recommended to run nodejs server.
+I setup an OTA server at http://103.253.146.183/, you may need to
+- register new account
+- then copy ```apiKey, _id```,  at ```Profile``` for ```OTA_UUID, OTA_TOKEN``` at ```user_config.h```
+- update ```APIKEY``` at ```tools/fotaclient/fota-client.js```. You will need node.js to register new firmware
+- from server, create new application, named ```otaupdate``` (check Makefile for other names)
+- ```make``` to compile the example. Then ```make flash``` to flash the fist firmware. By default, this new firmware labeled with version 0.0.1.
+- do something with the code, or just leave it alone for few seconds.
+- ready for new version? edit ```.version```, e.g. 0.0.2 for this new cool update. ``` make clean && make && make IMAGE=2 && make register``` to label your image with new version, and then upload to OTA server
 
-OTA-client, which upload images (1, 2 for ESP) and register new version, is found at tools/fotaclient. Need more update to use with make (pull request is more than welcome, since I am quite low in bandwidth now).
-
-## OTA client
-Found at /tools/fotaclient. APIKEY should be provided by go to OTA server >> Profile, copy "apiKey" from return JSON.
+Via UART logging, you should see new version 0.0.2 downloaded, then ESP boots new firmware, print out your last compiling time.
 
 ## To use
+By default, flash size is 4096 KB (1024+1024 with OTA=1). Pull request for Makefile to work with all flash options is more than welcome.
 
+Command to use:
 ```
 make OTA=1/0                # default OTA=1
 make OTA=1 IMAGE=1/2        # generate image user1/user2
 make OTA=1 IMAGE=1/2 flash  # program with OTA enable
-make FLASH_SIZE = 512/4096  # choose flash size
 make register               # upload, register new version. Must setup OTA server first
 ```
 
-## How to write makefile for program:
+## How to write makefile for your own program:
 
-Declare ROOT, this is the root of the project, from which could access apps and Makefile.common
-
-Example of Makefile for program under ```/examples```:
+Look at Makefile for program under ```/examples```:
 ```
+PROJECT = yourprojectname
 ROOT = ../..
+
 APPS += fota
+APPS += mqtt
+
 include ${ROOT}/Makefile.common
 ```
 
-## Using APP
-Please (me), check for frequence update
+## Using APPs
+All credit of apps/ belong to their authors. Mis config and/or using belong to me.
 
 + mqtt https://github.com/tuanpmt/esp_mqtt
 + json parsing https://bitbucket.org/zserge/jsmn
@@ -66,3 +62,6 @@ Please (me), check for frequence update
 ## Todo
 + makefile with all options of flash
 + flash file system testing
+
+## License
+MIT

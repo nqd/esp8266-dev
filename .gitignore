@@ -1,6 +1,7 @@
 *.o
 *.swp
 .version
+user_config.h
 .objs/
 .firmwares/
 firmware/

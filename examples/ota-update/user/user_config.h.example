@@ -1,0 +1,19 @@
+#ifndef _USER_CONFIG_H_
+#define _USER_CONFIG_H_
+
+#define SSID            	""
+#define SSID_PASSWORD   	""
+
+#define UPDATE_SERVER_IP    "103.253.146.183"
+#define UPDATE_SERVER_PORT  80
+
+#define OTA_UUID          ""
+#define OTA_TOKEN         ""
+#define OTA_CLIENT        "ESP"
+#define OTA_VERSION       VERSION
+
+#define FOTA_SECURE       0
+
+#define INTERVAL          (30*1000)      // milisecond
+
+#endif

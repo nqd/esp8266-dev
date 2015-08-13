@@ -52,8 +52,8 @@ void user_init(void)
   os_printf("\n");
   uart0_tx_buffer("\n", os_strlen("\n"));
 
-  os_printf("SDK version:%s\n", system_get_sdk_version());
-  os_printf("Compile time:%s %s\n",__DATE__,__TIME__);
+  os_printf("SDK version: %s\n", system_get_sdk_version());
+  os_printf("Compile time: %s %s\n",__DATE__,__TIME__);
   os_printf("Project %s with version %s\n", PROJECT, VERSION);
 
   // Set station mode
