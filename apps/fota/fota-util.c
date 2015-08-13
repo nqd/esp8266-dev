@@ -13,6 +13,9 @@
 #define FAILED    -1
 #define SUCCESS   0
 
+#define INFO
+#define REPORT
+
 #ifndef INFO
 #define INFO os_printf
 #endif

@@ -9,6 +9,9 @@
 #include "fota-firmware.h"
 #include "fota-util.h"
 
+#define INFO
+#define REPORT
+
 #ifndef INFO
 #define INFO os_printf
 #endif
