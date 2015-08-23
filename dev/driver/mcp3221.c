@@ -5,8 +5,13 @@
 #include "driver/uart.h"
 #include "driver/i2c_master.h"
 
+#if 1
+#define DEBUG(...)
+#define INFO(...)
+#else
 #define DEBUG(...) os_printf(__VA_ARGS__)
 #define INFO(...) os_printf(__VA_ARGS__)
+#endif
 
 bool ICACHE_FLASH_ATTR
 mcp3221_read(uint8 addr, uint16 *pData)
