@@ -32,7 +32,8 @@ user_init()
     uart_init(BIT_RATE_115200, BIT_RATE_115200);
 
     //Set station mode
-    wifi_set_opmode( 0x1 );
+    wifi_set_opmode(0x1);
+    stationConf.bssid_set = 0; //need not check MAC address of AP
 
     //Set ap settings
     os_memcpy(&stationConf.ssid, ssid, 32);

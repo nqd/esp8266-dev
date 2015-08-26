@@ -220,7 +220,7 @@ else ifeq ($(OTA), 1)
 	-$(ESPTOOL) --port $(ESPPORT) write_flash -fs 32m-c1 0x00000 $(ROOT)/esp-sdk/bin/boot_v1.4\(b1\).bin $(IMAGE_ADDRESS) $(BIN_NAME_OTA) 0x3FC000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0x3FE000 $(ROOT)/esp-sdk/bin/blank.bin
 endif
 endif
-	${ROOT}/tools/serialdump-linux -b115200 ${ESPPORT}
+	# ${ROOT}/tools/serialdump-linux -b115200 ${ESPPORT}
 	# screen ${ESPPORT} 115200
 
 login:

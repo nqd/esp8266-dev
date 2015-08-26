@@ -61,6 +61,8 @@ void user_init(void)
   char password[64] = SSID_PASSWORD;
   struct station_config stationConf;
   wifi_set_opmode(0x1);
+  stationConf.bssid_set = 0; //need not check MAC address of AP
+
   // Set ap settings
   os_memcpy(&stationConf.ssid, ssid, 32);
   os_memcpy(&stationConf.password, password, 64);
