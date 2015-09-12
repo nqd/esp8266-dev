@@ -4,6 +4,10 @@ FW_BASE    = .firmwares
 # change this, with your configuration
 COMPILE_ROOT ?= ${HOME}/esp-open-sdk/xtensa-lx106-elf/bin
 
+# fota setting
+FOTA_PROFILE ?= DEMO
+FOTA_CONFIGFILE ?= ${HOME}/.fotaclient-config.json
+
 # say 512, 1024, 4096
 FLASH_SIZE ?= 4096
 
@@ -220,7 +224,7 @@ else ifeq ($(OTA), 1)
 	-$(ESPTOOL) --port $(ESPPORT) write_flash -fs 32m-c1 0x00000 $(ROOT)/esp-sdk/bin/boot_v1.4\(b1\).bin $(IMAGE_ADDRESS) $(BIN_NAME_OTA) 0x3FC000 $(ROOT)/esp-sdk/bin/esp_init_data_default.bin 0x3FE000 $(ROOT)/esp-sdk/bin/blank.bin
 endif
 endif
-	${ROOT}/tools/serialdump-linux -b115200 ${ESPPORT}
+	# ${ROOT}/tools/serialdump-linux -b115200 ${ESPPORT}
 	# screen ${ESPPORT} 115200
 
 login:
@@ -230,7 +234,7 @@ login:
 IMAGE1 := $(addprefix $(FW_BASE)/, $(FLASH_SIZE)_user1.bin)
 IMAGE2 := $(addprefix $(FW_BASE)/, $(FLASH_SIZE)_user2.bin)
 register:
-	-$(FOTA_CLIENT) --application $(PROJECT) --version $(VERSION) --i1 $(IMAGE1) --i2 $(IMAGE2)
+	-$(FOTA_CLIENT) --application $(PROJECT) --version $(VERSION) --i1 $(IMAGE1) --i2 $(IMAGE2) --config ${FOTA_CONFIGFILE} --profile ${FOTA_PROFILE}
 
 clean:
 	$(Q) rm -f $(APP_AR)

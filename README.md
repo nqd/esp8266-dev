@@ -6,7 +6,8 @@ Short: I do not like the developing environment provided by Espressif. Then I re
 
 This dev env will use as much (closed blobs) libs from Espressif as possible. However, current json parsing of SDK (taken from Contiki OS) is not good enough, I have no way to check if this/that string is a valid one, then I decided to use [jsmn](https://bitbucket.org/zserge/jsmn)
 
-All examples have been testing with SDK 1.2.0, 4MB Module-12. 512KB Module-01 is considered out of date.
+All examples have been testing with SDK 1.3.0, 4MB Module-12.
+Module-01 512KB is considered out of date.
 
 ## Begin
 1. Install compiler for ESP with [esp-open-sdk](https://github.com/pfalcon/esp-open-sdk). It would be good if you install at HOME.
@@ -20,7 +21,7 @@ git clone --recursive https://github.com/nqd/esp8266-dev.git
 I setup an OTA server at http://103.253.146.183/, you may need to
 - register new account
 - then copy ```apiKey, _id```,  at ```Profile``` for ```OTA_UUID, OTA_TOKEN``` at ```user_config.h```
-- update ```APIKEY``` at ```tools/fotaclient/fota-client.js```. You will need node.js to register new firmware
+- copy ```tools/fotaclient/.fotaclient-config.json.example``` to ```$HOME/.fotaclient-config.json```, and update ```APIKEY```. You will need node.js to register new firmware
 - from server, create new application, named ```otaupdate``` (check Makefile for other names)
 - ```make``` to compile the example. Then ```make flash``` to flash the fist firmware. By default, this new firmware labeled with version 0.0.1.
 - do something with the code, or just leave it alone for few seconds.
